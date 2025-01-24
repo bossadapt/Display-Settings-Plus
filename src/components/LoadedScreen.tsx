@@ -1,18 +1,21 @@
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction, useRef, useState } from "react";
 import Select from 'react-select';
-import { FrontendMonitor } from "../xrandr_exports";
+import { FrontendMonitor, point } from "../globalInterfaces";
 import FreeHandPosition from "./FreeHandPosition";
 import './Loaded.css';
 import FocusedMonitorSettings from "./FocusedMonitorSettings";
+import { Application, Renderer } from "pixi.js";
 interface LoadedProps {
   customMonitors: FrontendMonitor[];
   initialMonitors: FrontendMonitor[];
   setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
 }
 export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMonitors, setMonitors }) => {
-  const [initialFocusedMonitor, setInitialFocusedMonitor] = useState<FrontendMonitor>(initialMonitors[0]);
-  const [customFocusedMonitor, setCustomFocusedMonitor] = useState<FrontendMonitor>(customMonitors[0]);
+  const [focusedMonitorIdx, setFocusedMonitorIdx] = useState(0);
   const [focusedPreset, setFocusedPreset] = useState(0);
+  const screenDragOffsetTotal = useRef<point>({ x: 0, y: 0 });
+  const monitorScale = 10;
+  const app = useRef<Application<Renderer> | null>(null);
   //TODO: make this more legit later
   const presetsOptions = [
     { value: 0, label: 'Preset 0' },
@@ -69,16 +72,16 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
         })}></Select>
       </div>
       <hr />
-      <FreeHandPosition customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setMonitors}></FreeHandPosition>
+      <FreeHandPosition screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} app={app} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setMonitors}></FreeHandPosition>
       <hr />
       <div>
         <h2>Focused Monitor Settings</h2>
         <hr style={{ width: "36%" }} />
-        {customMonitors.map((mon) => { return (<button disabled={initialFocusedMonitor === mon} onClick={() => { setInitialFocusedMonitor(mon); setCustomFocusedMonitor(mon) }}>{mon.name}</button>) })}
+        {customMonitors.map((mon, idx) => { return (<button key={mon.name} disabled={focusedMonitorIdx == idx} onClick={() => { setFocusedMonitorIdx(idx) }}>{mon.name}</button>) })}
       </div>
       <hr />
       <div>
-        <FocusedMonitorSettings customFocusedMonitor={customFocusedMonitor} initialFocusedMonitors={initialFocusedMonitor} setMonitors={setMonitors}></FocusedMonitorSettings>
+        <FocusedMonitorSettings screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} freeHandPositionCanvas={app} focusedMonitorIdx={focusedMonitorIdx} customMonitor={customMonitors} initialMonitors={initialMonitors} setMonitors={setMonitors}></FocusedMonitorSettings>
       </div>
     </div>
   );

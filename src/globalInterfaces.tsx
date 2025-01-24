@@ -1,3 +1,8 @@
+
+export interface point {
+    x: number;
+    y: number;
+}
 //These are more surface leveled versions of the xrandr versions
 export interface FrontendMonitor {
     name: string;

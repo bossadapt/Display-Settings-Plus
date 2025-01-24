@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { FrontendMonitor } from "./xrandr_exports";
+import { FrontendMonitor } from "./globalInterfaces";
 import "./App.css";
 import LoadedScreen from "./components/LoadedScreen";
 import LoadingScreen from "./components/LoadingScreen";

@@ -1,22 +1,20 @@
 import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, Renderer, BitmapText } from 'pixi.js';
-import { useState, useRef, Dispatch, SetStateAction } from 'react';
-import { FrontendMonitor } from '../xrandr_exports';
+import { useState, useRef, Dispatch, SetStateAction, MutableRefObject } from 'react';
+import { FrontendMonitor, point } from '../globalInterfaces';
 
 interface FreeHandPositionProps {
+    monitorScale: number;
     initialMonitors: FrontendMonitor[];
     customMonitors: FrontendMonitor[];
+    app: MutableRefObject<Application<Renderer> | null>;
+    screenDragOffsetTotal: MutableRefObject<point>;
     setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
 }
-export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonitors, customMonitors, setMonitors }) => {
-    // size of monitors / monitor scale
-    const monitorScale = 10;
+export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOffsetTotal, monitorScale, app, initialMonitors, customMonitors, setMonitors }) => {
     // within 10 px of another mon will cause a snap
     const snapPixelLength = 50;
-    const app = useRef<Application<Renderer> | null>(null);
     const dragTarget = useRef<null | Container<ContainerChild>>(null)
     const screenDragActive = useRef(false);
-    const screenDragOffsetXTotal = useRef(0);
-    const screenDragOffsetYTotal = useRef(0);
     const initialDragX = useRef(0);
     const initialDragY = useRef(0);
     const previousDragOffsetX = useRef(0);
@@ -24,7 +22,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
     //needs to be use state to update button color
     const [snapEnabled, setSnapEnabled] = useState(true);
     const snapEnabledRef = useRef(true);
-
     const didInit = useRef(false);
     async function init(canvasRef: ICanvas) {
         let appLocal = new Application();
@@ -92,6 +89,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         monitorContainer.x = monitor.x / monitorScale;
         monitorContainer.y = monitor.y / monitorScale;
         monitorContainer.label = monitor.name;
+        console.log("Width:,", monitor.widthPx, "Height:", monitor.heightPx);
         // Enable the bunny to be interactive... this will allow it to respond to mouse and touch events
         monitorContainer.eventMode = 'static';
         // This button mode will mean the hand cursor appears when you roll over the bunny with your mouse
@@ -124,8 +122,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             let difY = eve.globalY - previousDragOffsetY.current;
             previousDragOffsetX.current = eve.globalX;
             previousDragOffsetY.current = eve.globalY;
-            screenDragOffsetXTotal.current += difX;
-            screenDragOffsetYTotal.current += difY;
+            screenDragOffsetTotal.current.x += difX;
+            screenDragOffsetTotal.current.y += difY;
             app.current!.stage.children.forEach((child) => {
                 child.x += difX;
                 child.y += difY;
@@ -251,30 +249,33 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
                         dragTarget.current.y = initialDragY.current;
                         return;
                     }
+                    //console.log("Width:,", dragTarget.current.width, "Height:", dragTarget.current.height);
+                    //have to use this over width and height of monitors because for some reason it rounds 1920/10 = 194 as seen in print above
+                    let dragTargetMonitor = initialMonitors.find((mon) => (mon.name == dragTarget.current?.label))!;
                     if (Math.abs(difX) > Math.abs(difY) || (!validTop && !validBottom)) {
                         if ((difX < 0 && validLeft) || !validRight) {
                             //left
-                            dragTarget.current.x = monitorSnapTarget.x - dragTarget.current.width;
+                            dragTarget.current.x = monitorSnapTarget.x - dragTargetMonitor.widthPx / monitorScale;
                             dragTarget.current.y = monitorSnapTarget.y;
                         } else {
                             //right
-                            dragTarget.current.x = monitorSnapTarget.x + monitorSnapTarget.width;
+                            dragTarget.current.x = monitorSnapTarget.x + dragTargetMonitor.widthPx / monitorScale;
                             dragTarget.current.y = monitorSnapTarget.y;
                         }
                     } else {
                         if ((difY < 0 && validTop) || !validBottom) {
                             //up
                             dragTarget.current.x = monitorSnapTarget.x;
-                            dragTarget.current.y = monitorSnapTarget.y - dragTarget.current.height;
+                            dragTarget.current.y = monitorSnapTarget.y - dragTargetMonitor.heightPx / monitorScale;
                         } else {
                             //down
                             dragTarget.current.x = monitorSnapTarget.x;
-                            dragTarget.current.y = monitorSnapTarget.y + monitorSnapTarget.height;
+                            dragTarget.current.y = monitorSnapTarget.y + dragTargetMonitor.heightPx / monitorScale;
                         }
                     }
                 }
             }
-            updateGlobalPosition(dragTarget.current.label, dragTarget.current.x * monitorScale, dragTarget.current.y * monitorScale);
+            updateGlobalPosition(dragTarget.current.label, (dragTarget.current.x - screenDragOffsetTotal.current.x) * monitorScale, (dragTarget.current.y - screenDragOffsetTotal.current.y) * monitorScale);
             app.current!.stage.off('pointermove', onDragMove);
             dragTarget.current.alpha = 1;
             dragTarget.current = null;
@@ -284,12 +285,12 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
     function resetCameraPosition() {
         if (app.current) {
             app.current!.stage.children.forEach((mon => {
-                mon.x -= screenDragOffsetXTotal.current;
-                mon.y -= screenDragOffsetYTotal.current;
+                mon.x -= screenDragOffsetTotal.current.x;
+                mon.y -= screenDragOffsetTotal.current.y;
             }));
         }
-        screenDragOffsetXTotal.current = 0;
-        screenDragOffsetYTotal.current = 0;
+        screenDragOffsetTotal.current.x = 0;
+        screenDragOffsetTotal.current.y = 0;
     }
     function resetMonitorsPositions() {
         if (app.current) {
@@ -299,8 +300,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             }));
         }
         setMonitors((mons) => mons.map((curMon, idx) => ({ ...curMon, x: initialMonitors[idx].x, y: initialMonitors[idx].y })));
-        screenDragOffsetXTotal.current = 0;
-        screenDragOffsetYTotal.current = 0;
+        screenDragOffsetTotal.current.x = 0;
+        screenDragOffsetTotal.current.y = 0;
     }
     function toggleSnap() {
         //for rerendero for button
@@ -326,11 +327,16 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
                 }
             })
             //revert the offset to normalize
-            app.current.stage.children.forEach((mon) => {
+            let newMonitors = [...customMonitors];
+            app.current.stage.children.forEach((mon, idx) => {
                 mon.x -= minOffsetX;
                 mon.y -= minOffsetY;
+                newMonitors[idx].x = mon.x * monitorScale;
+                newMonitors[idx].y = mon.y * monitorScale;
             });
-            setMonitors((mons) => mons.map((curMon) => ({ ...curMon, x: curMon.x - (minOffsetX * monitorScale), y: curMon.y - (minOffsetX * monitorScale) })));
+            setMonitors(newMonitors);
+            screenDragOffsetTotal.current.x = 0;
+            screenDragOffsetTotal.current.y = 0;
         }
     }
     return (
@@ -359,85 +365,3 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
     );
 }
 export default FreeHandPosition;
-//(async () => {
-// made a useaction
-// Create a new application
-// const app = new Application();
-
-// // Initialize the application
-// await app.init({ background: '#1099bb', resizeTo: window });
-
-// Append the application canvas to the document body ????????????????????
-//document.body.appendChild(app.canvas);
-
-// unneeded, instead using graphics
-// Load the bunny texture
-// const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
-// Set the texture's scale mode to nearest to preserve pixelation
-//texture.baseTexture.scaleMode = SCALE_MODES.NEAREST;
-
-//iterates the monitors
-// for (let i = 0; i < 10; i++) {
-//     createBunny(Math.floor(Math.random() * app.screen.width), Math.floor(Math.random() * app.screen.height));
-// }
-
-// turned into create monitor
-// function createBunny(x, y) {
-//     // Create our little bunny friend..
-//     const bunny = new Sprite(texture);
-
-//     // Enable the bunny to be interactive... this will allow it to respond to mouse and touch events
-//     bunny.eventMode = 'static';
-
-//     // This button mode will mean the hand cursor appears when you roll over the bunny with your mouse
-//     bunny.cursor = 'pointer';
-
-//     // Center the bunny's anchor point
-//     bunny.anchor.set(0.5);
-
-//     // Make it a bit bigger, so it's easier to grab
-//     bunny.scale.set(3);
-
-//     // Setup events for mouse + touch using the pointer events
-//     bunny.on('pointerdown', onDragStart, bunny);
-
-//     // Move the sprite to its designated position
-//     bunny.x = x;
-//     bunny.y = y;
-
-//     // Add it to the stage
-//     app.stage.addChild(bunny);
-// }
-
-// made a useaction
-// let dragTarget: Sprite | null = null;
-
-// app.stage.eventMode = 'static';
-// app.stage.hitArea = app.screen;
-// app.stage.on('pointerup', onDragEnd);
-// app.stage.on('pointerupoutside', onDragEnd);
-
-//Corrected with target and usestatea
-//     function onDragMove(event) {
-//         if (dragTarget) {
-//             dragTarget.parent.toLocal(event.global, null, dragTarget.position);
-//         }
-//     }
-
-//     function onDragStart() {
-//         // Store a reference to the data
-//         // * The reason for this is because of multitouch *
-//         // * We want to track the movement of this particular touch *
-//         this.alpha = 0.5;
-//         dragTarget = this;
-//         app.stage.on('pointermove', onDragMove);
-//     }
-
-//     function onDragEnd() {
-//         if (dragTarget) {
-//             app.stage.off('pointermove', onDragMove);
-//             dragTarget.alpha = 1;
-//             dragTarget = null;
-//         }
-//     }
-// })();
