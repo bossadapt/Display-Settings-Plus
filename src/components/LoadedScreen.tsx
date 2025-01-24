@@ -3,13 +3,15 @@ import Select from 'react-select';
 import { FrontendMonitor } from "../xrandr_exports";
 import FreeHandPosition from "./FreeHandPosition";
 import './Loaded.css';
+import FocusedMonitorSettings from "./FocusedMonitorSettings";
 interface LoadedProps {
   customMonitors: FrontendMonitor[];
   initialMonitors: FrontendMonitor[];
   setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
 }
-export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMonitors }) => {
-  const [focusedMonitor, setFocusedMonitor] = useState<FrontendMonitor | null>(null);
+export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMonitors, setMonitors }) => {
+  const [initialFocusedMonitor, setInitialFocusedMonitor] = useState<FrontendMonitor>(initialMonitors[0]);
+  const [customFocusedMonitor, setCustomFocusedMonitor] = useState<FrontendMonitor>(customMonitors[0]);
   const [focusedPreset, setFocusedPreset] = useState(0);
   //TODO: make this more legit later
   const presetsOptions = [
@@ -67,16 +69,16 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
         })}></Select>
       </div>
       <hr />
-      <FreeHandPosition customMonitors={customMonitors} initialMonitors={initialMonitors}></FreeHandPosition>
+      <FreeHandPosition customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setMonitors}></FreeHandPosition>
       <hr />
       <div>
         <h2>Focused Monitor Settings</h2>
         <hr style={{ width: "36%" }} />
-        {customMonitors.map((mon) => { return (<button disabled={focusedMonitor === mon} onClick={() => { setFocusedMonitor(mon) }}>{mon.name}</button>) })}
+        {customMonitors.map((mon) => { return (<button disabled={initialFocusedMonitor === mon} onClick={() => { setInitialFocusedMonitor(mon); setCustomFocusedMonitor(mon) }}>{mon.name}</button>) })}
       </div>
       <hr />
       <div>
-        {/*TODO: individual monitor settings*/}
+        <FocusedMonitorSettings customFocusedMonitor={customFocusedMonitor} initialFocusedMonitors={initialFocusedMonitor} setMonitors={setMonitors}></FocusedMonitorSettings>
       </div>
     </div>
   );

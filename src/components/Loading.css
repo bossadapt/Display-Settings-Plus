@@ -13,10 +13,11 @@ body {
   background: rgb(11, 11, 20);
   font-family: 'Inconsolata', monospace;
   overflow: hidden;
+  overflow-y: scroll;
   margin: 0px;
 }
 
-h1 {
+.loading-h1 {
   position: absolute;
   height: 40px;
   margin: auto;

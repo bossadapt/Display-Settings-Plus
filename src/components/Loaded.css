@@ -47,3 +47,6 @@ button:active {
   box-shadow: none;
   transform: translateY(0);
 }
+body{
+  background: rgb(11, 11, 20);
+}

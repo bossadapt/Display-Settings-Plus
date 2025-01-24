@@ -1,0 +1,56 @@
+.settingsContainer{
+    border-style: inset;
+    border-width: 2px;
+    border-radius: 20px;
+    display: flex;
+    display: row;
+    border-color: hotpink;
+    width: 96vw;
+    margin-left: 2vw;
+    margin-right: 2vw;
+    margin-top: 2vh;
+    margin-bottom: 2vh;
+    height: 20vh;
+}
+
+.settingsDescriptonContainer{
+    width: 20vw;
+    margin-left: 5vw;
+    margin-right: 5vw;
+    margin-top: auto;
+    margin-bottom: auto;
+
+}
+.settingsDescriptonContainer > h2{
+    margin:auto;;
+    color: hotpink;
+}
+.settingsEditorContainer{
+    display: flex;
+    display: row;
+    margin-top: auto;
+    margin-bottom: auto;
+}
+/*https://codepen.io/savwiley/pen/xxVRqXX*/
+input {
+    margin-left: 5px;
+    margin-right: 5px;
+    width: 100px;
+    padding: 10px;
+    height: 50px;
+    font-size: 18px;
+    outline:none;
+    background: linear-gradient(to left top, #000, #22132e) fixed;
+    border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.8);
+    transition: all 0.5s;
+  }
+  
+  input:hover {
+    border: 2px solid rgba(255,255,255,0.5);
+  }
+  input:focus {
+    border: 2px solid rgba(255,255,255,0.5);
+    background: linear-gradient(to left top, #000, #4e2d69) fixed;
+  }
