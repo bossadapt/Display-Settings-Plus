@@ -24,14 +24,21 @@ function App() {
       return;
     }
     didInit.current = true;
-    getMonitors();
+    invoke<FrontendMonitor[]>("get_monitors", {}).then((res) => {
+      initialMonitorsInfo.current = res;
+      setCustomMonitorsInfo(res);
+      console.log(res);
+    });
   }, []);
+  // let the loading screen do the work instead of busywait it
+  // async function getMonitors() {
+  //   invoke<FrontendMonitor[]>("get_monitors", {}).then((res) => {
+  //     initialMonitorsInfo.current = res;
+  //     setCustomMonitorsInfo(res);
+  //   });
 
-  async function getMonitors() {
-    let monitors: FrontendMonitor[] = await invoke("get_monitors", {});
-    initialMonitorsInfo.current = monitors;
-    setCustomMonitorsInfo(monitors);
-  }
+
+  // }
 
   return (
     <div>{customMonitorsInfo.length != 0 ? <LoadedScreen customMonitors={customMonitorsInfo} initialMonitors={initialMonitorsInfo.current} setMonitors={setCustomMonitorsInfo} /> : <LoadingScreen />}</div>

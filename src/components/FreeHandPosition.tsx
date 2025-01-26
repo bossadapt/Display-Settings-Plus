@@ -90,9 +90,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         monitorContainer.y = monitor.y / monitorScale;
         monitorContainer.label = monitor.name;
         console.log("Width:,", monitor.widthPx, "Height:", monitor.heightPx);
-        // Enable the bunny to be interactive... this will allow it to respond to mouse and touch events
+        // Enable the bad boi to be interactive... this will allow it to respond to mouse and touch events
         monitorContainer.eventMode = 'static';
-        // This button mode will mean the hand cursor appears when you roll over the bunny with your mouse
         monitorContainer.cursor = 'pointer';
         const monitorGraphic = new Graphics();
         //square
@@ -108,6 +107,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         monitorContainer.on('mousedown', onDragStart, monitorGraphic);
         monitorContainer.addChild(monitorGraphic, monitorText);
         // Add it to the stage
+        monitorContainer.width = monitor.widthPx / monitorScale;
+        monitorContainer.height = monitor.heightPx / monitorScale;
         appLocal.stage.addChild(monitorContainer);
     }
     function onScreenDragStart(eve: FederatedPointerEvent) {
@@ -249,28 +250,27 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
                         dragTarget.current.y = initialDragY.current;
                         return;
                     }
-                    //console.log("Width:,", dragTarget.current.width, "Height:", dragTarget.current.height);
-                    //have to use this over width and height of monitors because for some reason it rounds 1920/10 = 194 as seen in print above
-                    let dragTargetMonitor = initialMonitors.find((mon) => (mon.name == dragTarget.current?.label))!;
+                    //snapping it
+                    //TODO: allow the user with diffrent sized screens to snap to either the bottom or the top of the thing they are holding(test with inverted screen)
                     if (Math.abs(difX) > Math.abs(difY) || (!validTop && !validBottom)) {
                         if ((difX < 0 && validLeft) || !validRight) {
                             //left
-                            dragTarget.current.x = monitorSnapTarget.x - dragTargetMonitor.widthPx / monitorScale;
+                            dragTarget.current.x = monitorSnapTarget.x - dragTarget.current.width;
                             dragTarget.current.y = monitorSnapTarget.y;
                         } else {
                             //right
-                            dragTarget.current.x = monitorSnapTarget.x + dragTargetMonitor.widthPx / monitorScale;
+                            dragTarget.current.x = monitorSnapTarget.x + monitorSnapTarget.width;
                             dragTarget.current.y = monitorSnapTarget.y;
                         }
                     } else {
                         if ((difY < 0 && validTop) || !validBottom) {
                             //up
                             dragTarget.current.x = monitorSnapTarget.x;
-                            dragTarget.current.y = monitorSnapTarget.y - dragTargetMonitor.heightPx / monitorScale;
+                            dragTarget.current.y = monitorSnapTarget.y - dragTarget.current.height;
                         } else {
                             //down
                             dragTarget.current.x = monitorSnapTarget.x;
-                            dragTarget.current.y = monitorSnapTarget.y + dragTargetMonitor.heightPx / monitorScale;
+                            dragTarget.current.y = monitorSnapTarget.y + monitorSnapTarget.height;
                         }
                     }
                 }
@@ -306,7 +306,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
     function toggleSnap() {
         //for rerendero for button
         setSnapEnabled((prev) => {
-            console.log("setting snap to", !prev);
             return (!prev);
         });
         //for the listener's ref to understand not to snap anymore

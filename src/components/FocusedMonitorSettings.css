@@ -28,8 +28,7 @@
 .settingsEditorContainer{
     display: flex;
     display: row;
-    margin-top: auto;
-    margin-bottom: auto;
+    margin: auto;
 }
 /*https://codepen.io/savwiley/pen/xxVRqXX*/
 input {

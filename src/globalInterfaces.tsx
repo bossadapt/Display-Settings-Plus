@@ -3,6 +3,28 @@ export interface point {
     x: number;
     y: number;
 }
+export enum Rotation {
+    Normal = "Normal",
+    Left = "Left",
+    Inverted = "Inverted",
+    Right = "Right",
+}
+export interface Mode {
+    xid: number,
+    width: number,
+    height: number,
+    dot_clock: number,
+    hsync_tart: number,
+    hsync_end: number,
+    htotal: number,
+    hskew: number,
+    vsync_start: number,
+    vsync_end: number,
+    vtotal: number,
+    name: String,
+    flags: number,
+    rate: number,
+}
 //These are more surface leveled versions of the xrandr versions
 export interface FrontendMonitor {
     name: string;
@@ -22,6 +44,7 @@ export interface FrontendOutput {
     timestamp: number;
     isPrimary: boolean;
     crtc?: number;
+    rotation: Rotation;
     name: string;
     mmWidth: number;
     mmHeight: number;
@@ -29,7 +52,7 @@ export interface FrontendOutput {
     subpixelOrder: number;
     crtcs: number[];
     clones: number[];
-    modes: number[];
-    preferredModes: number[];
-    currentMode?: number;
+    modes: Mode[];
+    preferredModes: Mode[];
+    currentMode?: Mode;
 }
