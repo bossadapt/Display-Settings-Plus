@@ -1,6 +1,6 @@
 import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, Renderer, BitmapText } from 'pixi.js';
 import { useState, useRef, Dispatch, SetStateAction, MutableRefObject } from 'react';
-import { FrontendMonitor, point } from '../globalInterfaces';
+import { FrontendMonitor, point } from '../globalValues';
 
 interface FreeHandPositionProps {
     monitorScale: number;
@@ -30,10 +30,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         for (let i = 0; i < customMonitors.length; i++) {
             createMonitor(appLocal, customMonitors[i]);
         }
-        //createGrid(appLocal);
-        //TODO: cant seem to figure out whats going on with pixel.js's example
-        // must be rendering off screen or something
-        //createGrid(appLocal);
 
         appLocal.resizeTo = window;
         appLocal.stage.eventMode = 'static';

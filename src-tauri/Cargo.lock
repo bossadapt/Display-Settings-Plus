@@ -4977,12 +4977,12 @@ dependencies = [
 [[package]]
 name = "xrandr"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67a14ec30c869847f1d2f4632d38e0360b0b3380cbb12ac241bfe24050a6a8de"
 dependencies = [
  "indexmap 1.9.3",
  "itertools",
  "libc",
+ "serde",
+ "serde_json",
  "thiserror 1.0.69",
  "time",
  "x11",

@@ -1,20 +1,22 @@
 import { Dispatch, MutableRefObject, SetStateAction, useState } from "react";
-import { FrontendMonitor, Mode, point, Rotation } from "../globalInterfaces";
+import { customSelectTheme, FrontendMonitor, Mode, point, Rotation } from "../globalValues";
 import "./FocusedMonitorSettings.css";
-import { Application, BlendModeFilter, Renderer } from "pixi.js";
-import Select, { SingleValue } from "react-select";
+import { Application, Renderer } from "pixi.js";
+import Select from "react-select";
+import { invoke } from "@tauri-apps/api/core";
 interface FocusedMonitorSettingsProps {
     focusedMonitorIdx: number;
     monitorScale: number;
     screenDragOffsetTotal: MutableRefObject<point>;
     freeHandPositionCanvas: MutableRefObject<Application<Renderer> | null>
-    customMonitor: FrontendMonitor[];
-    initialMonitors: FrontendMonitor[];
+    customMonitors: FrontendMonitor[];
+    initialMonitors: MutableRefObject<FrontendMonitor[]>;
     setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
 }
-export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ monitorScale, screenDragOffsetTotal, freeHandPositionCanvas, focusedMonitorIdx, customMonitor, initialMonitors, setMonitors }) => {
+export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ monitorScale, screenDragOffsetTotal, freeHandPositionCanvas, focusedMonitorIdx, customMonitors, initialMonitors, setMonitors }) => {
 
-
+    //Enable
+    //TODO: make the enable do something
     //POSITIONS
     function setPositionX(x: number) {
         if (freeHandPositionCanvas.current) {
@@ -40,9 +42,27 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ 
             )
         );
     }
+    function applyPosition() {
+        //TODO: Normalize the values before passing
+        if (!(customMonitors[focusedMonitorIdx].x == initialMonitors.current[focusedMonitorIdx].x
+            && customMonitors[focusedMonitorIdx].y == initialMonitors.current[focusedMonitorIdx].y))
+            invoke("set_position", {
+                xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
+                x: customMonitors[focusedMonitorIdx].x,
+                y: customMonitors[focusedMonitorIdx].y
+            }).then(() => {
+                initialMonitors.current[focusedMonitorIdx].x = customMonitors[focusedMonitorIdx].x;
+                initialMonitors.current[focusedMonitorIdx].y = customMonitors[focusedMonitorIdx].y;
+                console.log("SET NEW MONITOR POSITION");
+            }).catch((reason) => {
+                //TODO:  handle error
+
+                console.log("Primary not properly set:", reason);
+            });
+    }
     function resetPosition() {
         setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
-            ? { ...curMon, x: initialMonitors[idx].x, y: initialMonitors[idx].y } : curMon)));
+            ? { ...curMon, x: initialMonitors.current[idx].x, y: initialMonitors.current[idx].y } : curMon)));
     }
 
 
@@ -55,7 +75,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ 
     { value: Rotation.Inverted, label: 'Inverted' },
     { value: Rotation.Right, label: 'Right' }];
     function changeRotation(rotation: Rotation | undefined) {
-        let prevRotation = customMonitor[focusedMonitorIdx].outputs[0].rotation;
+        let prevRotation = customMonitors[focusedMonitorIdx].outputs[0].rotation;
         if (rotation && prevRotation !== rotation) {
             //If this  is going to make the monitor sideways or return it from it
             //TODO: dont make it relative, jsut make it so it cusomized per perspective
@@ -71,8 +91,8 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ 
 
                 //switch width and height in both states
                 //TODO: make it look more legit and upscale each of the children too
-                freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].width = customMonitor[focusedMonitorIdx].heightPx / 10;
-                freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].height = customMonitor[focusedMonitorIdx].widthPx / 10;
+                freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].width = customMonitors[focusedMonitorIdx].heightPx / monitorScale;
+                freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].height = customMonitors[focusedMonitorIdx].widthPx / monitorScale;
 
                 setMonitors((mons) =>
                     mons.map((curMon, idx) =>
@@ -87,9 +107,25 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ 
                 ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, rotation: rotation } : out)) } : curMon)));
         }
     }
+    function applyRotation() {
+        //TODO: Normalize the values before passing
+        if (!(customMonitors[focusedMonitorIdx].outputs[0].rotation == initialMonitors.current[focusedMonitorIdx].outputs[0].rotation)) {
+            invoke("set_rotation", {
+                xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
+                rotation: customMonitors[focusedMonitorIdx].outputs[0].rotation
+            }).then(() => {
+                initialMonitors.current[focusedMonitorIdx].outputs[0].rotation = customMonitors[focusedMonitorIdx].outputs[0].rotation;
+                console.log("SET NEW MONITOR POSITION");
+            }).catch((reason) => {
+                //TODO:  handle error
+
+                console.log("Primary not properly set:", reason);
+            });
+        }
+    }
     function resetRotation() {
         setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
-            ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, rotation: initialMonitors[idx].outputs[0].rotation } : out)) } : curMon)));
+            ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, rotation: initialMonitors.current[idx].outputs[0].rotation } : out)) } : curMon)));
     }
 
 
@@ -97,34 +133,78 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ 
 
 
     //MODE
-    //TODO: make rate get reset to an available rate that works with the ratio
-    //TODO: fix reset
-    const [focusedModeRatio, setFocusedModeRation] = useState<String>(customMonitor[focusedMonitorIdx].outputs[0].name);
-    const modeRatioOptions = [...new Set(initialMonitors[focusedMonitorIdx].outputs[0].modes.map(mode => (mode.name)))].map(uniqueRatios => ({ value: uniqueRatios, label: uniqueRatios }));
-    const modeFPSOptions = initialMonitors[focusedMonitorIdx].outputs[0].modes.filter((mode) => (mode.name === focusedModeRatio)).sort((a, b) => b.rate - a.rate).map((mode) => ({ value: mode, label: mode.rate.toFixed(5) }))
+    function setFocusedModeRatio(newRatio: String) {
+        setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
+            ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, name: newRatio.toString() } : out)) } : curMon)));
+        let futureAvailableModes = initialMonitors.current[focusedMonitorIdx].outputs[0].modes.filter((mode) => (mode.name === newRatio)).sort((a, b) => b.rate - a.rate);
+        changeModePreset(futureAvailableModes[0]);
+
+    }
+    const modeRatioOptions = [...new Set(initialMonitors.current[focusedMonitorIdx].outputs[0].modes.map(mode => (mode.name)))].map(uniqueRatios => ({ value: uniqueRatios, label: uniqueRatios }));
+    const modeFPSOptions = initialMonitors.current[focusedMonitorIdx].outputs[0].modes.filter((mode) => (mode.name === customMonitors[focusedMonitorIdx].outputs[0].currentMode!.name)).sort((a, b) => b.rate - a.rate).map((mode) => ({ value: mode, label: mode.rate.toFixed(5) }))
+    //TODO: make the reset aand set not make the freehand text blurry(scale properly)
     function changeModePreset(newVal: Mode | undefined) {
         if (newVal) {
             setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
-                ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: newVal } : out)) } : curMon)));
+                ? { ...curMon, widthPx: newVal.width, heightMm: newVal.height, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: newVal } : out)) } : curMon)));
+
+        }
+        if (freeHandPositionCanvas.current) {
+            freeHandPositionCanvas.current.stage.children[focusedMonitorIdx].width = newVal!.width / monitorScale;
+            freeHandPositionCanvas.current.stage.children[focusedMonitorIdx].height = newVal!.height / monitorScale;
+
         }
     }
     function resetModePreset() {
         setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
-            ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: initialMonitors[focusedMonitorIdx].outputs[0].currentMode } : out)) } : curMon)));
+            ? { ...curMon, widthPx: initialMonitors.current[focusedMonitorIdx].widthPx, heightPx: initialMonitors.current[focusedMonitorIdx].heightPx, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode } : out)) } : curMon)));
 
+        if (freeHandPositionCanvas.current) {
+            freeHandPositionCanvas.current.stage.children[focusedMonitorIdx].width = initialMonitors.current[focusedMonitorIdx].widthPx / monitorScale;
+            freeHandPositionCanvas.current.stage.children[focusedMonitorIdx].height = initialMonitors.current[focusedMonitorIdx].heightPx / monitorScale;
+
+        }
     }
+    //TODO: if it  gets stuck it forces you to disable the monitor and restart it.
+    //TODO: fix the snapping when scaled down /rotated
+    function applyModePreset() {
+        if (!(customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid == initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.xid)) {
+            invoke("set_mode", {
+                outputXid: customMonitors[focusedMonitorIdx].outputs[0].xid,
+                modeXid: customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid
+            }).then(() => {
+                initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.xid = customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid;
+                console.log("SET NEW MODE");
+                console.log("xidSet:", customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid);
+            }).catch((reason) => {
+                //TODO:  handle error
+
+                console.log("Primary not properly set:", reason);
+            });
+        }
+    }
+    //TODO: make RESET stick to the right side of the screen for each of the fields
     return (<div>
+        <div className="settingsContainer">
+            <div className="settingsDescriptonContainer">
+                <h2>Enabled:</h2>
+            </div>
+            <div className="settingsEditorContainer">
+                <input type="checkbox"></input>
+                <button onClick={resetPosition}>Reset</button>
+            </div>
+        </div>
         <div className="settingsContainer">
             <div className="settingsDescriptonContainer">
                 <h2>Position:</h2>
             </div>
             <div className="settingsEditorContainer">
                 <h2 style={{ marginTop: "auto", marginBottom: "auto" }}>X:</h2>
-                <input type="number" value={customMonitor[focusedMonitorIdx].x} onChange={(eve) => setPositionX(Number(eve.target.value))} />
+                <input type="number" value={customMonitors[focusedMonitorIdx].x} onChange={(eve) => setPositionX(Number(eve.target.value))} />
                 <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "15px" }}>Y:</h2>
-                <input type="number" value={customMonitor[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
+                <input type="number" value={customMonitors[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
                 <button onClick={resetPosition}>Reset</button>
-                <button>Apply</button>
+                <button onClick={applyPosition}>Apply</button>
             </div>
         </div>
         <div className="settingsContainer">
@@ -133,27 +213,10 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ 
             </div>
             <div className="settingsEditorContainer">
                 <Select options={rotationOptions} onChange={(eve) => { changeRotation(eve?.value) }} value={rotationOptions.find((rot) =>
-                    (rot.value === customMonitor[focusedMonitorIdx].outputs[0].rotation)
-                )} theme={(theme) => ({
-                    ...theme, borderRadius: 0,
-                    colors: {
-                        ...theme.colors,
-                        neutral0: 'black',
-                        neutral70: 'black',
-                        neutral80: 'white',
-                        //primary == background
-                        //hover over
-                        primary25: 'hotpink',
-                        primary50: 'pink',
-                        primary60: 'black',
-                        primary75: 'black',
-                        //already selected background from dropdown
-                        primary: 'hotpink',
-                    },
-                })}></Select>
+                    (rot.value === customMonitors[focusedMonitorIdx].outputs[0].rotation)
+                )} theme={customSelectTheme}></Select>
                 <button onClick={resetRotation}>Reset</button>
-                <button>Apply</button>
-
+                <button onClick={applyRotation}>Apply</button>
             </div>
         </div>
         <div className="settingsContainer">
@@ -164,56 +227,22 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ 
                 <h2 style={{ marginTop: "auto", marginBottom: "auto" }}>Ratio:</h2>
                 <Select options={modeRatioOptions} onChange={(eve) => {
                     if (eve) {
-                        setFocusedModeRation(eve.label)
+                        console.log("set eve.label to:", eve.label);
+                        setFocusedModeRatio(eve.label)
                     }
                 }} value={modeRatioOptions.find((option) => {
-                    console.log(option.value);
-                    console.log(customMonitor[focusedMonitorIdx].outputs[0].currentMode?.name);
-                    console.log(option.value === customMonitor[focusedMonitorIdx].outputs[0].currentMode?.name);
-                    return option.value === focusedModeRatio;
-                })} theme={(theme) => ({
-                    ...theme, borderRadius: 0,
-                    colors: {
-                        ...theme.colors,
-                        neutral0: 'black',
-                        neutral70: 'black',
-                        neutral80: 'white',
-                        //primary == background
-                        //hover over
-                        primary25: 'hotpink',
-                        primary50: 'pink',
-                        primary60: 'black',
-                        primary75: 'black',
-                        //already selected background from dropdown
-                        primary: 'hotpink',
-                    },
-                })}></Select>
+                    return option.value === customMonitors[focusedMonitorIdx].outputs[0].currentMode!.name;
+                })} theme={customSelectTheme}></Select>
                 <h2 style={{ marginTop: "auto", marginBottom: "auto" }}>Rate:</h2>
                 <Select options={modeFPSOptions} onChange={(eve) => changeModePreset(eve?.value)} value={modeFPSOptions.find((option) => {
+                    console.log("RAN Rate VALUE CODE:")
                     console.log(option.value);
-                    console.log(customMonitor[focusedMonitorIdx].outputs[0].currentMode);
-                    console.log(option.value === customMonitor[focusedMonitorIdx].outputs[0].currentMode);
-                    return option.value.xid === customMonitor[focusedMonitorIdx].outputs[0].currentMode?.xid;
-                })} theme={(theme) => ({
-                    ...theme, borderRadius: 0,
-                    colors: {
-                        ...theme.colors,
-                        neutral0: 'black',
-                        neutral70: 'black',
-                        neutral80: 'white',
-                        //primary == background
-                        //hover over
-                        primary25: 'hotpink',
-                        primary50: 'pink',
-                        primary60: 'black',
-                        primary75: 'black',
-                        //already selected background from dropdown
-                        primary: 'hotpink',
-                    },
-                })}></Select>
+                    console.log(customMonitors[focusedMonitorIdx].outputs[0].currentMode);
+                    console.log(option.value === customMonitors[focusedMonitorIdx].outputs[0].currentMode);
+                    return option.value.xid === customMonitors[focusedMonitorIdx].outputs[0].currentMode?.xid;
+                })} theme={customSelectTheme}></Select>
                 <button onClick={resetModePreset}>Reset</button>
-                <button>Apply</button>
-
+                <button onClick={applyModePreset}>Apply</button>
             </div>
         </div>
 

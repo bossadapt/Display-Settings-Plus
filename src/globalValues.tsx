@@ -1,3 +1,23 @@
+import { defaultTheme, Theme } from "react-select";
+
+export const customSelectTheme: Theme = {
+    ...defaultTheme,
+    borderRadius: 0,
+    colors: {
+        ...defaultTheme.colors,
+        neutral0: 'black',
+        neutral70: 'black',
+        neutral80: 'white',
+        //primary == background
+        //hover over
+        primary25: 'hotpink',
+        primary50: 'pink',
+        primary75: 'black',
+        //already selected background from dropdown
+        primary: 'hotpink',
+
+    }
+}
 
 export interface point {
     x: number;

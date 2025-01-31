@@ -1,16 +1,17 @@
-import { Dispatch, SetStateAction, useRef, useState } from "react";
+import { Dispatch, MutableRefObject, SetStateAction, useRef, useState } from "react";
 import Select from 'react-select';
-import { FrontendMonitor, point } from "../globalInterfaces";
+import { customSelectTheme, FrontendMonitor, point } from "../globalValues";
 import FreeHandPosition from "./FreeHandPosition";
 import './Loaded.css';
 import FocusedMonitorSettings from "./FocusedMonitorSettings";
 import { Application, Renderer } from "pixi.js";
+import { invoke } from "@tauri-apps/api/core";
 interface LoadedProps {
   customMonitors: FrontendMonitor[];
-  initialMonitors: FrontendMonitor[];
-  setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
+  initialMonitors: MutableRefObject<FrontendMonitor[]>;
+  setCustMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
 }
-export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMonitors, setMonitors }) => {
+export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMonitors, setCustMonitors }) => {
   const [focusedMonitorIdx, setFocusedMonitorIdx] = useState(0);
   const [focusedPreset, setFocusedPreset] = useState(0);
   const screenDragOffsetTotal = useRef<point>({ x: 0, y: 0 });
@@ -23,29 +24,38 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
     { value: 2, label: 'Preset 2' },
     { value: 3, label: 'Preset 3' }
   ]
+  //PRIMARY MONITOR
   const monitorOptions = customMonitors.map((mon) => { return { value: mon.name, label: mon.name } })
+  function setPrimaryMonitor(newPrimName: String | undefined) {
+    if (newPrimName) {
+      setCustMonitors((mons) => (mons.map((mon) => (mon.name == newPrimName ? { ...mon, isPrimary: true } : { ...mon, isPrimary: false }))));
+    }
+  }
+  function resetPrimryMonitor() {
+    setCustMonitors((mons) => (mons.map((mon, idx) => ({ ...mon, isPrimary: initialMonitors.current[idx].isPrimary }))));
+  }
+  function applyPrimaryMonitor() {
+    let newPrimaryIndex = customMonitors.findIndex((mon) => mon.isPrimary);
+    let OldPrimaryIndex = initialMonitors.current.findIndex((mon) => mon.isPrimary);
+    if (newPrimaryIndex != OldPrimaryIndex) {
+      invoke("set_primary", { xid: customMonitors[newPrimaryIndex].outputs[0].xid }).then(() => {
+        initialMonitors.current[OldPrimaryIndex].isPrimary = false;
+        initialMonitors.current[newPrimaryIndex].isPrimary = true;
+
+      }).catch((reason) => {
+        //TODO:  handle error
+
+        console.log("Primary not properly set:", reason);
+      });
+    }
+  }
+  //
+  //
   return (
     //presets dropdown yoinked from https://react-select.com/home
     <div className="loadedMain">
       <div style={{ display: "flex", flexDirection: "row" }}>
-        {/*TODO: make a universal color scheme for select so that its not unreadable*/}
-        <Select options={presetsOptions} theme={(theme) => ({
-          ...theme, borderRadius: 0,
-          colors: {
-            ...theme.colors,
-            neutral0: 'black',
-            neutral70: 'black',
-            neutral80: 'white',
-            //primary == background
-            //hover over
-            primary25: 'hotpink',
-            primary50: 'pink',
-            primary60: 'black',
-            primary75: 'black',
-            //already selected background from dropdown
-            primary: 'hotpink',
-          },
-        })}></Select>
+        <Select options={presetsOptions} theme={customSelectTheme}></Select>
         <button style={{ color: "hotpink", height: "40px" }}>Save Preset</button>
         {/*TODO: add an onclick*/}
         <button style={{ marginLeft: "auto", color: "hotpink", height: "40px" }}>Apply Changes</button>
@@ -53,26 +63,12 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
       <hr style={{ marginTop: "10px", marginBottom: "10px" }} />
       <div style={{ display: "flex", flexDirection: "row" }}>
         <h2 style={{ color: "white", marginLeft: "10px", marginTop: "2px", marginBottom: "10px", marginRight: "20px" }}>Primary Monitor:</h2>
-        <Select defaultValue={monitorOptions[customMonitors.findIndex((mon) => { return (mon.isPrimary == true) })]} options={monitorOptions} theme={(theme) => ({
-          ...theme, borderRadius: 0,
-          colors: {
-            ...theme.colors,
-            neutral0: 'black',
-            neutral70: 'black',
-            neutral80: 'white',
-            //primary == background
-            //hover over
-            primary25: 'hotpink',
-            primary50: 'pink',
-            primary60: 'black',
-            primary75: 'black',
-            //already selected background from dropdown
-            primary: 'hotpink',
-          },
-        })}></Select>
+        <Select onChange={(eve) => setPrimaryMonitor(eve?.value)} value={monitorOptions[customMonitors.findIndex((mon) => { return (mon.isPrimary == true) })]} options={monitorOptions} theme={customSelectTheme}></Select>
+        <button onClick={resetPrimryMonitor}>Reset</button>
+        <button onClick={applyPrimaryMonitor}>Apply</button>
       </div>
       <hr />
-      <FreeHandPosition screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} app={app} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setMonitors}></FreeHandPosition>
+      <FreeHandPosition screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} app={app} customMonitors={customMonitors} initialMonitors={initialMonitors.current} setMonitors={setCustMonitors}></FreeHandPosition>
       <hr />
       <div>
         <h2>Focused Monitor Settings</h2>
@@ -81,9 +77,9 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
       </div>
       <hr />
       <div>
-        <FocusedMonitorSettings screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} freeHandPositionCanvas={app} focusedMonitorIdx={focusedMonitorIdx} customMonitor={customMonitors} initialMonitors={initialMonitors} setMonitors={setMonitors}></FocusedMonitorSettings>
+        <FocusedMonitorSettings screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} freeHandPositionCanvas={app} focusedMonitorIdx={focusedMonitorIdx} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors}></FocusedMonitorSettings>
       </div>
-    </div>
+    </div >
   );
 }
 export default LoadedScreen;

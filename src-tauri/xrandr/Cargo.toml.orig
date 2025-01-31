@@ -1,0 +1,24 @@
+[package]
+name = "xrandr"
+version = "0.2.0"
+authors = [ "Rintse", "Daniel Franklin <daniel@danielzfranklin.org>" ]
+edition = "2021"
+description = "Safe rust bindings to (some parts of) xrandr"
+license = "MIT"
+repository = "https://github.com/danielzfranklin/xrandr-rs"
+keywords = ["xrandr", "libxrandr", "libxrandr2", "bindings", "linux"]
+categories = ["os::linux-apis", "api-bindings"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+thiserror = "1.0.24"
+x11 = { version = "2.18.2", features = ["xlib", "xrandr"] }
+indexmap = "1.6.2"
+serde = {version = "1.0.133", features=["derive"], optional=true}
+time = "0.3.20"
+itertools = "0.10.5"
+libc = "0.2.146"
+
+[features]
+serialize = ["serde", "indexmap/serde-1"]
