@@ -17,6 +17,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
   const screenDragOffsetTotal = useRef<point>({ x: 0, y: 0 });
   const monitorScale = 10;
   const app = useRef<Application<Renderer> | null>(null);
+  const [focusedMonitorEnabled, setFocusedMonitorEnabled] = useState(customMonitors[focusedMonitorIdx].outputs[0].xid === 0);
   //TODO: make this more legit later
   const presetsOptions = [
     { value: 0, label: 'Preset 0' },

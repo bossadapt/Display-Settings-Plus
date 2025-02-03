@@ -13,10 +13,88 @@ interface FocusedMonitorSettingsProps {
     initialMonitors: MutableRefObject<FrontendMonitor[]>;
     setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
 }
-export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ monitorScale, screenDragOffsetTotal, freeHandPositionCanvas, focusedMonitorIdx, customMonitors, initialMonitors, setMonitors }) => {
+export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
+    { monitorScale, screenDragOffsetTotal, freeHandPositionCanvas, focusedMonitorIdx, customMonitors, initialMonitors, setMonitors }) => {
 
     //Enable
-    //TODO: make the enable do something
+    ///used to disable the rest of the options:
+
+    const monitorEnabled = customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid !== 0;
+    function toggleEnable() {
+        console.log("button pressed");
+        if (!monitorEnabled) {
+            console.log("enabled");
+            //updating page state
+            setMonitors((monList) =>
+                monList.map((mon, idx) => (
+                    idx === focusedMonitorIdx
+                        ? {
+                            ...mon,
+                            x: initialMonitors.current[focusedMonitorIdx].x,
+                            y: initialMonitors.current[focusedMonitorIdx].y,
+                            outputs: mon.outputs.map((out, idx) =>
+                                idx === 0
+                                    ? {
+                                        ...out,
+                                        rotation: initialMonitors.current[focusedMonitorIdx].outputs[0].rotation,
+                                        currentMode: out.currentMode
+                                            ? {
+                                                ...out.currentMode,
+                                                //if the initial config's mode was disabled, set it to the pefered mode
+                                                xid: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.xid !== 0 ? initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.xid : initialMonitors.current[focusedMonitorIdx].outputs[0].preferredModes[0].xid
+                                            }  // Ensure currentMode is not undefined
+                                            : undefined  // Preserve undefined if there's no currentMode
+                                    }
+                                    : out
+                            )
+                        }
+                        : mon
+                ))
+            );
+            //updating freehand state, setting them visable
+            if (freeHandPositionCanvas.current) {
+                freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].eventMode = 'static';
+                freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].alpha = 1;
+            } else {
+                console.log("stage not defined")
+            }
+        } else {
+            console.log("disabled");
+            //what happens inside the xrandr library:
+            /*
+            self.x = 0;
+            self.y = 0;
+            self.mode = 0;
+            self.rotation = Rotation::Normal;
+            self.outputs.clear();
+            */
+            setMonitors((monList) =>
+                monList.map((mon, idx) => (
+                    idx === focusedMonitorIdx
+                        ? {
+                            ...mon,
+                            x: 0,
+                            y: 0,
+                            outputs: mon.outputs.map((out, idx) =>
+                                idx === 0
+                                    ? {
+                                        ...out,
+                                        rotation: Rotation.Normal,
+                                        currentMode: out.currentMode
+                                            ? { ...out.currentMode, xid: 0 }  // Ensure currentMode is not undefined
+                                            : undefined  // Preserve undefined if there's no currentMode
+                                    }
+                                    : out
+                            )
+                        }
+                        : mon
+                ))
+            );
+            //updating freehand state, setting them fully transparent
+            freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].eventMode = 'none';
+            freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].alpha = 0;
+        }
+    }
     //POSITIONS
     function setPositionX(x: number) {
         if (freeHandPositionCanvas.current) {
@@ -190,8 +268,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ 
                 <h2>Enabled:</h2>
             </div>
             <div className="settingsEditorContainer">
-                <input type="checkbox"></input>
-                <button onClick={resetPosition}>Reset</button>
+                <input type="checkbox" onChange={undefined} checked={monitorEnabled} onClick={toggleEnable}></input>
             </div>
         </div>
         <div className="settingsContainer">
@@ -200,11 +277,11 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ 
             </div>
             <div className="settingsEditorContainer">
                 <h2 style={{ marginTop: "auto", marginBottom: "auto" }}>X:</h2>
-                <input type="number" value={customMonitors[focusedMonitorIdx].x} onChange={(eve) => setPositionX(Number(eve.target.value))} />
+                <input disabled={!monitorEnabled} type="number" value={customMonitors[focusedMonitorIdx].x} onChange={(eve) => setPositionX(Number(eve.target.value))} />
                 <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "15px" }}>Y:</h2>
-                <input type="number" value={customMonitors[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
-                <button onClick={resetPosition}>Reset</button>
-                <button onClick={applyPosition}>Apply</button>
+                <input disabled={!monitorEnabled} type="number" value={customMonitors[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
+                <button disabled={!monitorEnabled} onClick={resetPosition}>Reset</button>
+                <button disabled={!monitorEnabled} onClick={applyPosition}>Apply</button>
             </div>
         </div>
         <div className="settingsContainer">
@@ -212,11 +289,11 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ 
                 <h2>Rotation:</h2>
             </div>
             <div className="settingsEditorContainer">
-                <Select options={rotationOptions} onChange={(eve) => { changeRotation(eve?.value) }} value={rotationOptions.find((rot) =>
+                <Select isDisabled={!monitorEnabled} options={rotationOptions} onChange={(eve) => { changeRotation(eve?.value) }} value={rotationOptions.find((rot) =>
                     (rot.value === customMonitors[focusedMonitorIdx].outputs[0].rotation)
                 )} theme={customSelectTheme}></Select>
-                <button onClick={resetRotation}>Reset</button>
-                <button onClick={applyRotation}>Apply</button>
+                <button disabled={!monitorEnabled} onClick={resetRotation}>Reset</button>
+                <button disabled={!monitorEnabled} onClick={applyRotation}>Apply</button>
             </div>
         </div>
         <div className="settingsContainer">
@@ -225,7 +302,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ 
             </div>
             <div className="settingsEditorContainer">
                 <h2 style={{ marginTop: "auto", marginBottom: "auto" }}>Ratio:</h2>
-                <Select options={modeRatioOptions} onChange={(eve) => {
+                <Select isDisabled={!monitorEnabled} options={modeRatioOptions} onChange={(eve) => {
                     if (eve) {
                         console.log("set eve.label to:", eve.label);
                         setFocusedModeRatio(eve.label)
@@ -234,15 +311,15 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({ 
                     return option.value === customMonitors[focusedMonitorIdx].outputs[0].currentMode!.name;
                 })} theme={customSelectTheme}></Select>
                 <h2 style={{ marginTop: "auto", marginBottom: "auto" }}>Rate:</h2>
-                <Select options={modeFPSOptions} onChange={(eve) => changeModePreset(eve?.value)} value={modeFPSOptions.find((option) => {
-                    console.log("RAN Rate VALUE CODE:")
-                    console.log(option.value);
-                    console.log(customMonitors[focusedMonitorIdx].outputs[0].currentMode);
-                    console.log(option.value === customMonitors[focusedMonitorIdx].outputs[0].currentMode);
+                <Select isDisabled={!monitorEnabled} options={modeFPSOptions} onChange={(eve) => changeModePreset(eve?.value)} value={modeFPSOptions.find((option) => {
+                    // console.log("RAN Rate VALUE CODE:")
+                    // console.log(option.value);
+                    // console.log(customMonitors[focusedMonitorIdx].outputs[0].currentMode);
+                    // console.log(option.value === customMonitors[focusedMonitorIdx].outputs[0].currentMode);
                     return option.value.xid === customMonitors[focusedMonitorIdx].outputs[0].currentMode?.xid;
                 })} theme={customSelectTheme}></Select>
-                <button onClick={resetModePreset}>Reset</button>
-                <button onClick={applyModePreset}>Apply</button>
+                <button disabled={!monitorEnabled} onClick={resetModePreset}>Reset</button>
+                <button disabled={!monitorEnabled} onClick={applyModePreset}>Apply</button>
             </div>
         </div>
 

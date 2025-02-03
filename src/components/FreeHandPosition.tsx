@@ -86,8 +86,14 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         monitorContainer.y = monitor.y / monitorScale;
         monitorContainer.label = monitor.name;
         console.log("Width:,", monitor.widthPx, "Height:", monitor.heightPx);
-        // Enable the bad boi to be interactive... this will allow it to respond to mouse and touch events
-        monitorContainer.eventMode = 'static';
+        // handles if the monitor is disabled(should not be seen and interactive)
+        if (monitor.outputs[0].currentMode!.xid === 0) {
+            monitorContainer.eventMode = 'none';
+            monitorContainer.alpha = 0;
+        } else {
+            monitorContainer.eventMode = 'static';
+        }
+
         monitorContainer.cursor = 'pointer';
         const monitorGraphic = new Graphics();
         //square
