@@ -17,6 +17,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
   const screenDragOffsetTotal = useRef<point>({ x: 0, y: 0 });
   const monitorScale = 10;
   const app = useRef<Application<Renderer> | null>(null);
+  const createMonitorContainerRef = useRef<Function | null>(null);
   const [focusedMonitorEnabled, setFocusedMonitorEnabled] = useState(customMonitors[focusedMonitorIdx].outputs[0].xid === 0);
   //TODO: make this more legit later
   const presetsOptions = [
@@ -25,6 +26,11 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
     { value: 2, label: 'Preset 2' },
     { value: 3, label: 'Preset 3' }
   ]
+  //Collection handler
+  function applyAll() {
+    //TODO: apply all and clean up the imports and exports
+    //make it do something
+  }
   //PRIMARY MONITOR
   const monitorOptions = customMonitors.map((mon) => { return { value: mon.name, label: mon.name } })
   function setPrimaryMonitor(newPrimName: String | undefined) {
@@ -57,9 +63,8 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
     <div className="loadedMain">
       <div style={{ display: "flex", flexDirection: "row" }}>
         <Select options={presetsOptions} theme={customSelectTheme}></Select>
-        <button style={{ color: "hotpink", height: "40px" }}>Save Preset</button>
-        {/*TODO: add an onclick*/}
-        <button style={{ marginLeft: "auto", color: "hotpink", height: "40px" }}>Apply Changes</button>
+        <button style={{ color: "hotpink" }}>Save Preset</button>
+        <button style={{ marginLeft: "auto", color: "hotpink" }} onClick={applyAll}>Apply All Changes</button>
       </div>
       <hr style={{ marginTop: "10px", marginBottom: "10px" }} />
       <div style={{ display: "flex", flexDirection: "row" }}>
@@ -69,7 +74,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
         <button onClick={applyPrimaryMonitor}>Apply</button>
       </div>
       <hr />
-      <FreeHandPosition screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} app={app} customMonitors={customMonitors} initialMonitors={initialMonitors.current} setMonitors={setCustMonitors}></FreeHandPosition>
+      <FreeHandPosition screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} app={app} customMonitors={customMonitors} initialMonitors={initialMonitors.current} setMonitors={setCustMonitors} createMonitorContainerRef={createMonitorContainerRef}></FreeHandPosition>
       <hr />
       <div>
         <h2>Focused Monitor Settings</h2>
@@ -78,7 +83,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
       </div>
       <hr />
       <div>
-        <FocusedMonitorSettings screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} freeHandPositionCanvas={app} focusedMonitorIdx={focusedMonitorIdx} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors}></FocusedMonitorSettings>
+        <FocusedMonitorSettings screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} freeHandPositionCanvas={app} focusedMonitorIdx={focusedMonitorIdx} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} createMonitorFunctionRef={createMonitorContainerRef}></FocusedMonitorSettings>
       </div>
     </div >
   );

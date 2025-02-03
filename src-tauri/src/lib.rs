@@ -157,6 +157,20 @@ async fn set_rotation(xid: u64, rotation: Rotation) -> Result<(), XrandrError> {
     return Ok(());
 }
 #[tauri::command]
+async fn set_enable(xid: u64, enabled: bool) -> Result<(), XrandrError> {
+    //setting up vars
+    let mut xhandle = XHandle::open()?;
+    let res = ScreenResources::new(&mut xhandle)?;
+    let focused_output = res.output(&mut xhandle, xid)?;
+    //making the change
+    if enabled {
+        xhandle.enable(&focused_output)?;
+    } else {
+        xhandle.disable(&focused_output)?;
+    }
+    return Ok(());
+}
+#[tauri::command]
 async fn set_mode(output_xid: u64, mode_xid: u64) -> Result<(), XrandrError> {
     //setting up vars
     let mut xhandle = XHandle::open()?;
@@ -177,7 +191,8 @@ pub fn run() {
             set_enabled,
             set_position,
             set_rotation,
-            set_mode
+            set_mode,
+            set_enable
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

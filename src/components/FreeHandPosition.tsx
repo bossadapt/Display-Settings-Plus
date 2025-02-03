@@ -9,8 +9,9 @@ interface FreeHandPositionProps {
     app: MutableRefObject<Application<Renderer> | null>;
     screenDragOffsetTotal: MutableRefObject<point>;
     setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
+    createMonitorContainerRef: MutableRefObject<Function | null>;
 }
-export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOffsetTotal, monitorScale, app, initialMonitors, customMonitors, setMonitors }) => {
+export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOffsetTotal, monitorScale, app, initialMonitors, customMonitors, setMonitors, createMonitorContainerRef }) => {
     // within 10 px of another mon will cause a snap
     const snapPixelLength = 50;
     const dragTarget = useRef<null | Container<ContainerChild>>(null)
@@ -28,7 +29,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         await appLocal.init({ background: '#1a171f', canvas: canvasRef });
         //createGrid(appLocal);
         for (let i = 0; i < customMonitors.length; i++) {
-            createMonitor(appLocal, customMonitors[i]);
+            appLocal.stage.addChild(createMonitorContainer(customMonitors[i]));
         }
 
         appLocal.resizeTo = window;
@@ -40,6 +41,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         appLocal.stage.on('pointerup', onDragEnd);
         appLocal.stage.on('pointerupoutside', onDragEnd);
         app.current = appLocal;
+        createMonitorContainerRef.current = createMonitorContainer;
     }
     //TODO: maybe add the grid and fix the frequency of lines and make the move 
     // function createGrid(appLocal: Application<Renderer>) {
@@ -53,6 +55,11 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
     //             .moveTo(i * 10, 0)
     //             // Draw down to bottom (x = i*10, y = 100)
     //             .lineTo(i * 10, 100);
+    //     }
+
+    //     // Draw 10 horizontal lines spaced 10 pixels apart
+    //     for (let i = 0; i < appLocal.stage.height / 100; i++) {
+    //         // Move to start0, 100);
     //     }
 
     //     // Draw 10 horizontal lines spaced 10 pixels apart
@@ -78,7 +85,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
             )
         );
     }
-    function createMonitor(appLocal: Application<Renderer>, monitor: FrontendMonitor) {
+    function createMonitorContainer(monitor: FrontendMonitor): Container {
         // Container
         const monitorContainer = new Container();
         monitorContainer.isRenderGroup = true;
@@ -111,7 +118,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         // Add it to the stage
         monitorContainer.width = monitor.widthPx / monitorScale;
         monitorContainer.height = monitor.heightPx / monitorScale;
-        appLocal.stage.addChild(monitorContainer);
+        return monitorContainer;
     }
     function onScreenDragStart(eve: FederatedPointerEvent) {
         screenDragActive.current = true;
@@ -196,7 +203,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
                 //check if its within hit boxes located outside right outside of each monitor
                 let monitorsHitboxInsideOf = app.current!.stage.children.filter(
                     (mon) => {
-                        if (mon === dragTarget.current) {
+                        if (mon === dragTarget.current || mon.alpha === 0) {
                             return false;
                         } else {
                             let hitbox = {
@@ -229,19 +236,19 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
                     let difY = dragTarget.current.y - monitorSnapTarget.y;
                     let validTop = app.current!.stage.children.find((child) =>
 
-                        child != dragTarget.current && overLapEachOther(child.x, child.y, child.width, child.height,
+                        child != dragTarget.current && child.alpha !== 0 && overLapEachOther(child.x, child.y, child.width, child.height,
                             monitorSnapTarget.x, monitorSnapTarget.y - monitorSnapTarget.height, monitorSnapTarget.width, monitorSnapTarget.height)
                     ) == undefined;
                     let validRight = app.current!.stage.children.find((child) =>
-                        child !== dragTarget.current && overLapEachOther(child.x, child.y, child.width, child.height,
+                        child !== dragTarget.current && child.alpha !== 0 && overLapEachOther(child.x, child.y, child.width, child.height,
                             monitorSnapTarget.x + monitorSnapTarget.width, monitorSnapTarget.y, monitorSnapTarget.width, monitorSnapTarget.height)
                     ) == undefined;
                     let validLeft = app.current!.stage.children.find((child) =>
-                        child !== dragTarget.current && overLapEachOther(child.x, child.y, child.width, child.height,
+                        child !== dragTarget.current && child.alpha !== 0 && overLapEachOther(child.x, child.y, child.width, child.height,
                             monitorSnapTarget.x - monitorSnapTarget.width, monitorSnapTarget.y, monitorSnapTarget.width, monitorSnapTarget.height)
                     ) == undefined;
                     let validBottom = app.current!.stage.children.find((child) =>
-                        child !== dragTarget.current && overLapEachOther(child.x, child.y, child.width, child.height,
+                        child !== dragTarget.current && child.alpha !== 0 && overLapEachOther(child.x, child.y, child.width, child.height,
                             monitorSnapTarget.x, monitorSnapTarget.y + monitorSnapTarget.height, monitorSnapTarget.width, monitorSnapTarget.height)
                     ) == undefined;
                     //console.log("TValid" + validTop + ",BValid:" + validBottom + ",RValid:" + validRight + ",LValid" + validLeft);
@@ -327,6 +334,10 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
                     minOffsetY = mon.y;
                 }
             })
+            if (minOffsetX == Number.MAX_VALUE) {
+                //there are no monitors
+                return;
+            }
             //revert the offset to normalize
             let newMonitors = [...customMonitors];
             app.current.stage.children.forEach((mon, idx) => {
