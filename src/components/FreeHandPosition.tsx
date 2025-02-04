@@ -9,9 +9,9 @@ interface FreeHandPositionProps {
     app: MutableRefObject<Application<Renderer> | null>;
     screenDragOffsetTotal: MutableRefObject<point>;
     setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
-    createMonitorContainerRef: MutableRefObject<Function | null>;
+    rerenderMonitorsContainerRef: MutableRefObject<Function | null>;
 }
-export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOffsetTotal, monitorScale, app, initialMonitors, customMonitors, setMonitors, createMonitorContainerRef }) => {
+export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOffsetTotal, monitorScale, app, initialMonitors, customMonitors, setMonitors, rerenderMonitorsContainerRef }) => {
     // within 10 px of another mon will cause a snap
     const snapPixelLength = 50;
     const dragTarget = useRef<null | Container<ContainerChild>>(null)
@@ -41,7 +41,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         appLocal.stage.on('pointerup', onDragEnd);
         appLocal.stage.on('pointerupoutside', onDragEnd);
         app.current = appLocal;
-        createMonitorContainerRef.current = createMonitorContainer;
+        rerenderMonitorsContainerRef.current = rerenderMonitors;
     }
     //TODO: maybe add the grid and fix the frequency of lines and make the move 
     // function createGrid(appLocal: Application<Renderer>) {
@@ -80,10 +80,24 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         setMonitors((mons) =>
             mons.map((curMon) =>
                 curMon.name === monitorName
-                    ? { ...curMon, y, x }
+                    ? { ...curMon, y: Math.round(y), x: Math.round(x) }
                     : curMon
             )
         );
+    }
+    function rerenderMonitors(newMonitors: FrontendMonitor[]) {
+        if (app.current) {
+            console.log("rerender called");
+            //deletion
+            app.current!.stage.children = [];
+            //rebuilding
+            console.log("children:", app.current!.stage.children);
+            for (let i = 0; i < newMonitors.length; i++) {
+                app.current!.stage.addChild(createMonitorContainer(newMonitors[i]));
+            }
+        } else {
+            console.log("app not built yet, unable to rerender");
+        }
     }
     function createMonitorContainer(monitor: FrontendMonitor): Container {
         // Container
@@ -92,7 +106,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         monitorContainer.x = monitor.x / monitorScale;
         monitorContainer.y = monitor.y / monitorScale;
         monitorContainer.label = monitor.name;
-        console.log("Width:,", monitor.widthPx, "Height:", monitor.heightPx);
         // handles if the monitor is disabled(should not be seen and interactive)
         if (monitor.outputs[0].currentMode!.xid === 0) {
             monitorContainer.eventMode = 'none';
@@ -104,7 +117,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         monitorContainer.cursor = 'pointer';
         const monitorGraphic = new Graphics();
         //square
-        monitorGraphic.rect(0, 0, monitor.widthPx / monitorScale, monitor.heightPx / monitorScale);
+        console.log("Width:,", monitor.outputs[0].currentMode?.width, "Height:", monitor.outputs[0].currentMode?.height);
+        monitorGraphic.rect(0, 0, monitor.outputs[0].currentMode!.width / monitorScale, monitor.outputs[0].currentMode!.height / monitorScale);
         monitorGraphic.fillStyle = 'black';
         monitorGraphic.fill();
         monitorGraphic.stroke({ width: 2, color: 'pink' });
@@ -116,8 +130,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         monitorContainer.on('mousedown', onDragStart, monitorGraphic);
         monitorContainer.addChild(monitorGraphic, monitorText);
         // Add it to the stage
-        monitorContainer.width = monitor.widthPx / monitorScale;
-        monitorContainer.height = monitor.heightPx / monitorScale;
+        monitorContainer.width = monitor.outputs[0].currentMode!.width / monitorScale;
+        monitorContainer.height = monitor.outputs[0].currentMode!.height / monitorScale;
         return monitorContainer;
     }
     function onScreenDragStart(eve: FederatedPointerEvent) {

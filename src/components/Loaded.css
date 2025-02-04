@@ -1,8 +1,11 @@
 
-loadedMain {
+.loadedMain {
     display:flex;
     flex-direction: column;
   }
+  .react-select{
+height: 150px;
+}
 /* CSS from button people https://getcssscan.com/css-buttons-examples */
 button {
   appearance: none;

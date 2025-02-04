@@ -32,7 +32,7 @@
 }
 
 /*https://codepen.io/savwiley/pen/xxVRqXX*/
-input {
+input[type="number"] {
     margin-left: 5px;
     margin-right: 5px;
     width: 100px;
@@ -47,10 +47,66 @@ input {
     transition: all 0.5s;
   }
   
-  input:hover {
+  input[type="number"]:hover {
     border: 2px solid rgba(255,255,255,0.5);
   }
-  input:focus {
+  input[type="number"]:focus {
     border: 2px solid rgba(255,255,255,0.5);
     background: linear-gradient(to left top, #000, #4e2d69) fixed;
   }
+
+
+
+
+
+
+
+
+
+
+
+  /* */
+  input[type="checkbox"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+  }
+  
+  input[type="checkbox"]:focus {
+    outline: 0;
+  }
+  
+  .toggle {
+    height: 50px;
+    width: 150px;
+    display: inline-block;
+    position: relative;
+    margin: 0;
+    border: 2px solid #474755;
+    background: linear-gradient(180deg, #2D2F39 0%, #1F2027 100%);
+    transition: all 0.2s ease;
+  }
+  
+  .toggle:after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 70px;
+    height: 42px;
+    background: hotpink;
+    box-shadow: 0 1px 2px rgba(44, 44, 44, 0.2);
+    transition: all 0.2s cubic-bezier(0.5, 0.1, 0.75, 1.35);
+  }
+  
+  input[type="checkbox"]:checked + .toggle {
+    border-color: hotpink;
+  }
+  
+  input[type="checkbox"]:checked + .toggle:after {
+    transform: translateX(72px);
+  }
+
+    
