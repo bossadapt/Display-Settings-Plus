@@ -232,8 +232,11 @@ impl XHandle {
             .crtc
             .ok_or(XrandrError::OutputDisabled(output.name.clone()))?;
         let mut crtc = ScreenResources::new(self)?.crtc(self, crtc_id)?;
-
         crtc.mode = mode.xid;
+        //Created a pull that fixed this method at https://github.com/dzfranklin/xrandr-rs/pull/19
+        crtc.height = mode.height;
+        crtc.width = mode.width;
+        //
         self.apply_new_crtcs(&mut [crtc])
     }
 
@@ -346,6 +349,7 @@ impl XHandle {
         let old_crtcs = res.enabled_crtcs(self)?;
 
         // Construct new crtcs out of the old ones and the new where provided
+        // turning changed CRTC into a hashmap
         let mut changed_map: HashMap<XId, Crtc> = HashMap::new();
         changed.iter().cloned().for_each(|c| {
             changed_map.insert(c.xid, c);
@@ -362,8 +366,10 @@ impl XHandle {
 
         // In case the top-left corner is no longer at (0,0), renormalize
         normalize_positions(&mut new_crtcs);
+        let old_size = ScreenSize::fitting_crtcs(self, &old_crtcs);
+        println!("old screen size: {:?}", old_size);
         let new_size = ScreenSize::fitting_crtcs(self, &new_crtcs);
-
+        println!("new screen size: {:?}", new_size);
         // Disable crtcs that do not fit before setting the new size
         // Note that this should only be crtcs that were changed, but `changed`
         // contains the already altered crtc, so we have to use `old_crtcs`

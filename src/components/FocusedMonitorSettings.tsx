@@ -333,15 +333,14 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
         if (!(customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid == initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.xid)) {
             invoke("set_mode", {
                 outputXid: customMonitors[focusedMonitorIdx].outputs[0].xid,
-                modeXid: customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid
+                mode: customMonitors[focusedMonitorIdx].outputs[0].modes.find((mode) => (mode.xid === customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid))
             }).then(() => {
                 initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode! = customMonitors[focusedMonitorIdx].outputs[0].currentMode!;
                 console.log("SET NEW MODE");
-                console.log("xidSet:", customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid);
+                console.log("mode sent = :", customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid);
             }).catch((reason) => {
                 //TODO:  handle error
-
-                console.log("Primary not properly set:", reason);
+                console.log("Mode not properly set:", reason);
             });
         }
     }

@@ -171,14 +171,13 @@ async fn set_enable(xid: u64, enabled: bool) -> Result<(), XrandrError> {
     return Ok(());
 }
 #[tauri::command]
-async fn set_mode(output_xid: u64, mode_xid: u64) -> Result<(), XrandrError> {
+async fn set_mode(output_xid: u64, mode: Mode) -> Result<(), XrandrError> {
     //setting up vars
     let mut xhandle = XHandle::open()?;
     let res = ScreenResources::new(&mut xhandle)?;
     let focused_output = res.output(&mut xhandle, output_xid)?;
-    let focused_mode = res.mode(mode_xid)?;
     //making the change
-    xhandle.set_mode(&focused_output, &focused_mode)?;
+    xhandle.set_mode(&focused_output, &mode)?;
     return Ok(());
 }
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

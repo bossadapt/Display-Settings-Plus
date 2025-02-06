@@ -1,5 +1,5 @@
 use crate::XId;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::slice;
 use x11::xrandr;
 
@@ -11,7 +11,7 @@ const RR_DOUBLE_SCAN: u64 = 0x0000_0020;
 // down to resolution/refresh rates, but the `flags` field in particular
 // also encodes whether this mode is interlaced/doublescan
 //CUSTOM ADDED Serialize so that it works without reinitialization
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Mode {
     pub xid: XId,
     pub width: u32,
