@@ -110,7 +110,7 @@ async fn get_monitors() -> Vec<FrontendMonitor> {
     // xhandle.set_rotation(output, rotation)
     // let test = ScreenResources::mode(xhandle);
     // println!("{:#?}", test.join("\n NEW \n"));
-
+    //println!("{:#?}", monitors[0].outputs[0].properties);
     //println!("MONITORS: \n {:#?}", output);
 
     output

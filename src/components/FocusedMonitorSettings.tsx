@@ -28,30 +28,6 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     ///used to disable the rest of the options:
 
     const monitorEnabled = customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid !== 0;
-    function applyEnable() {
-        invoke("set_enabled", {
-            xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
-            enabled: monitorEnabled
-        }).then(() => {
-            initialMonitors.current[focusedMonitorIdx].outputs[0].xid = 0;
-            initialMonitors.current[focusedMonitorIdx].x = 0;
-            initialMonitors.current[focusedMonitorIdx].y = 0;
-            initialMonitors.current[focusedMonitorIdx].outputs[0].rotation = Rotation.Normal;
-            if (initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode) {
-                initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.width = initialMonitors.current[focusedMonitorIdx].widthPx;
-                initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.height = initialMonitors.current[focusedMonitorIdx].heightPx;
-            }
-            freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].x = 0;
-            freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].y = 0;
-
-            console.log("monitor disabled");
-        }).catch((reason) => {
-            //TODO:  handle error
-
-            console.log("Enable not applied", reason);
-        });
-
-    }
     function toggleEnable() {
         console.log("button pressed");
         if (!monitorEnabled) {
@@ -89,6 +65,8 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             if (freeHandPositionCanvas.current) {
                 freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].eventMode = 'static';
                 freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].alpha = 1;
+                freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].x = initialMonitors.current[focusedMonitorIdx].x;
+                freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].y = initialMonitors.current[focusedMonitorIdx].y;
             } else {
                 console.log("stage not defined")
             }
@@ -133,6 +111,8 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             //updating freehand state, setting them fully transparent
             freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].eventMode = 'none';
             freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].alpha = 0;
+            freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].x = 0;
+            freeHandPositionCanvas.current!.stage.children[focusedMonitorIdx].y = 0;
         }
     }
     //POSITIONS
@@ -163,57 +143,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             )
         );
     }
-    function normalizePositions() {
-        if (freeHandPositionCanvas.current) {
-            let minOffsetY = Number.MAX_VALUE;
-            let minOffsetX = Number.MAX_VALUE;
-            //find the smallest offsets
-            freeHandPositionCanvas.current.stage.children.forEach((mon) => {
-                if (mon.x < minOffsetX) {
-                    minOffsetX = mon.x;
-                }
-                if (mon.y < minOffsetY) {
-                    minOffsetY = mon.y;
-                }
-            })
-            if (minOffsetX == Number.MAX_VALUE) {
-                //there are no monitors
-                return;
-            }
-            //revert the offset to normalize
-            let newMonitors = [...customMonitors];
-            freeHandPositionCanvas.current.stage.children.forEach((mon, idx) => {
-                mon.x -= minOffsetX;
-                mon.y -= minOffsetY;
-                newMonitors[idx].x = mon.x * monitorScale;
-                newMonitors[idx].y = mon.y * monitorScale;
-            });
-            setMonitors(newMonitors);
-            screenDragOffsetTotal.current.x = 0;
-            screenDragOffsetTotal.current.y = 0;
-        }
-    }
-    function applyPosition() {
-        normalizePositions();
-        console.log("position function called");
-        if (!(customMonitors[focusedMonitorIdx].x == initialMonitors.current[focusedMonitorIdx].x
-            && customMonitors[focusedMonitorIdx].y == initialMonitors.current[focusedMonitorIdx].y)) {
-            console.log("checks passed");
-            invoke("set_position", {
-                xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
-                x: customMonitors[focusedMonitorIdx].x,
-                y: customMonitors[focusedMonitorIdx].y
-            }).then(() => {
-                initialMonitors.current[focusedMonitorIdx].x = customMonitors[focusedMonitorIdx].x;
-                initialMonitors.current[focusedMonitorIdx].y = customMonitors[focusedMonitorIdx].y;
-                console.log("SET NEW MONITOR POSITION");
-            }).catch((reason) => {
-                //TODO:  handle error
 
-                console.log("Primary not properly set:", reason);
-            });
-        }
-    }
     function resetPosition() {
         setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
             ? { ...curMon, x: initialMonitors.current[idx].x, y: initialMonitors.current[idx].y } : curMon)));
@@ -273,21 +203,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
 
         }
     }
-    function applyRotation() {
-        if (!(customMonitors[focusedMonitorIdx].outputs[0].rotation == initialMonitors.current[focusedMonitorIdx].outputs[0].rotation)) {
-            invoke("set_rotation", {
-                xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
-                rotation: customMonitors[focusedMonitorIdx].outputs[0].rotation
-            }).then(() => {
-                initialMonitors.current[focusedMonitorIdx].outputs[0].rotation = customMonitors[focusedMonitorIdx].outputs[0].rotation;
-                console.log("SET NEW MONITOR ROTATION");
-            }).catch((reason) => {
-                //TODO:  handle error
 
-                console.log("Primary not properly set:", reason);
-            });
-        }
-    }
     function resetRotation() {
         setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
             ? {
@@ -328,22 +244,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
         setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
             ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode } : out)) } : curMon)));
     }
-    //TODO: if it  gets stuck it forces you to disable the monitor and restart it.
-    function applyModePreset() {
-        if (!(customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid == initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.xid)) {
-            invoke("set_mode", {
-                outputXid: customMonitors[focusedMonitorIdx].outputs[0].xid,
-                mode: customMonitors[focusedMonitorIdx].outputs[0].modes.find((mode) => (mode.xid === customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid))
-            }).then(() => {
-                initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode! = customMonitors[focusedMonitorIdx].outputs[0].currentMode!;
-                console.log("SET NEW MODE");
-                console.log("mode sent = :", customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid);
-            }).catch((reason) => {
-                //TODO:  handle error
-                console.log("Mode not properly set:", reason);
-            });
-        }
-    }
+
     //TODO: make RESET stick to the right side of the screen for each of the fields
     return (<div>
         <div className="settingsContainer">
@@ -355,7 +256,6 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                     <input type="checkbox" checked={monitorEnabled} onChange={toggleEnable} />
                     <div className="toggle"></div>
                 </label>
-                <button onClick={applyEnable}>APPLY</button>
             </div>
         </div>
         <div className="settingsContainer">
@@ -368,7 +268,6 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                 <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "15px" }}>Y:</h2>
                 <input disabled={!monitorEnabled} type="number" value={customMonitors[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
                 <button disabled={!monitorEnabled} onClick={resetPosition}>Reset</button>
-                <button disabled={!monitorEnabled} onClick={applyPosition}>Apply</button>
             </div>
         </div>
         <div className="settingsContainer">
@@ -380,7 +279,6 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                     (rot.value === customMonitors[focusedMonitorIdx].outputs[0].rotation)
                 )} theme={customSelectTheme}></Select>
                 <button disabled={!monitorEnabled} onClick={resetRotation}>Reset</button>
-                <button disabled={!monitorEnabled} onClick={applyRotation}>Apply</button>
             </div>
         </div>
         <div className="settingsContainer">
@@ -406,7 +304,6 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                     return option.value.xid === customMonitors[focusedMonitorIdx].outputs[0].currentMode?.xid;
                 })} theme={customSelectTheme}></Select>
                 <button disabled={!monitorEnabled} onClick={resetModePreset}>Reset</button>
-                <button disabled={!monitorEnabled} onClick={applyModePreset}>Apply</button>
             </div>
         </div>
 

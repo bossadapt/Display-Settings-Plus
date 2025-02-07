@@ -6,6 +6,7 @@ import './Loaded.css';
 import FocusedMonitorSettings from "./FocusedMonitorSettings";
 import { Application, Renderer } from "pixi.js";
 import { invoke } from "@tauri-apps/api/core";
+import ApplySettingsPopup from "./ApplySettingsPopup";
 interface LoadedProps {
   customMonitors: FrontendMonitor[];
   initialMonitors: MutableRefObject<FrontendMonitor[]>;
@@ -17,6 +18,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
   const screenDragOffsetTotal = useRef<point>({ x: 0, y: 0 });
   const monitorScale = 10;
   const app = useRef<Application<Renderer> | null>(null);
+  const normalizePositionsRef = useRef<Function | null>(null);
   const rerenderMonitorsContainerRef = useRef<Function | null>(null);
   const [focusedMonitorEnabled, setFocusedMonitorEnabled] = useState(customMonitors[focusedMonitorIdx].outputs[0].xid === 0);
   //TODO: make this more legit later
@@ -74,7 +76,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
         <button onClick={applyPrimaryMonitor}>Apply</button>
       </div>
       <hr />
-      <FreeHandPosition screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} app={app} customMonitors={customMonitors} initialMonitors={initialMonitors.current} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef}></FreeHandPosition>
+      <FreeHandPosition screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} app={app} customMonitors={customMonitors} initialMonitors={initialMonitors.current} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef} normalizePositionsRef={normalizePositionsRef}></FreeHandPosition>
       <hr />
       <div>
         <h2>Focused Monitor Settings</h2>
@@ -85,6 +87,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
       <div>
         <FocusedMonitorSettings screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} freeHandPositionCanvas={app} focusedMonitorIdx={focusedMonitorIdx} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef}></FocusedMonitorSettings>
       </div>
+      <ApplySettingsPopup monitorsBeingApplied={[0]} customMonitors={customMonitors} initialMonitors={initialMonitors} normalizePositionsRef={normalizePositionsRef}></ApplySettingsPopup>
     </div >
   );
 }

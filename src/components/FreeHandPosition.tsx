@@ -10,8 +10,9 @@ interface FreeHandPositionProps {
     screenDragOffsetTotal: MutableRefObject<point>;
     setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
     rerenderMonitorsContainerRef: MutableRefObject<Function | null>;
+    normalizePositionsRef: MutableRefObject<Function | null>;
 }
-export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOffsetTotal, monitorScale, app, initialMonitors, customMonitors, setMonitors, rerenderMonitorsContainerRef }) => {
+export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOffsetTotal, monitorScale, app, initialMonitors, customMonitors, setMonitors, rerenderMonitorsContainerRef, normalizePositionsRef }) => {
     // within 10 px of another mon will cause a snap
     const snapPixelLength = 50;
     const dragTarget = useRef<null | Container<ContainerChild>>(null)
@@ -42,6 +43,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         appLocal.stage.on('pointerupoutside', onDragEnd);
         app.current = appLocal;
         rerenderMonitorsContainerRef.current = rerenderMonitors;
+        normalizePositionsRef.current = normalizePositions;
     }
     //TODO: maybe add the grid and fix the frequency of lines and make the move 
     // function createGrid(appLocal: Application<Renderer>) {
