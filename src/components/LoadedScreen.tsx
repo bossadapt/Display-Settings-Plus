@@ -18,9 +18,9 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
   const screenDragOffsetTotal = useRef<point>({ x: 0, y: 0 });
   const monitorScale = 10;
   const app = useRef<Application<Renderer> | null>(null);
+  const applyChangesRef = useRef<Function | null>(null);
   const normalizePositionsRef = useRef<Function | null>(null);
   const rerenderMonitorsContainerRef = useRef<Function | null>(null);
-  const [focusedMonitorEnabled, setFocusedMonitorEnabled] = useState(customMonitors[focusedMonitorIdx].outputs[0].xid === 0);
   //TODO: make this more legit later
   const presetsOptions = [
     { value: 0, label: 'Preset 0' },
@@ -29,9 +29,13 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
     { value: 3, label: 'Preset 3' }
   ]
   //Collection handler
-  function applyAll() {
-    //TODO: apply all and clean up the imports and exports
-    //make it do something
+  async function applyAll() {
+    console.log("applying all");
+    await applyPrimaryMonitor();
+    if (applyChangesRef.current) {
+      console.log("applying all exists");
+      applyChangesRef.current(customMonitors, customMonitors.map((_mon, idx) => (idx)));
+    }
   }
   //PRIMARY MONITOR
   const monitorOptions = customMonitors.map((mon) => { return { value: mon.name, label: mon.name } })
@@ -43,11 +47,12 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
   function resetPrimryMonitor() {
     setCustMonitors((mons) => (mons.map((mon, idx) => ({ ...mon, isPrimary: initialMonitors.current[idx].isPrimary }))));
   }
-  function applyPrimaryMonitor() {
+  async function applyPrimaryMonitor() {
     let newPrimaryIndex = customMonitors.findIndex((mon) => mon.isPrimary);
     let OldPrimaryIndex = initialMonitors.current.findIndex((mon) => mon.isPrimary);
     if (newPrimaryIndex != OldPrimaryIndex) {
-      invoke("set_primary", { xid: customMonitors[newPrimaryIndex].outputs[0].xid }).then(() => {
+      console.log("primary internal called");
+      await invoke("set_primary", { xid: customMonitors[newPrimaryIndex].outputs[0].xid }).then(() => {
         initialMonitors.current[OldPrimaryIndex].isPrimary = false;
         initialMonitors.current[newPrimaryIndex].isPrimary = true;
 
@@ -87,7 +92,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
       <div>
         <FocusedMonitorSettings screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} freeHandPositionCanvas={app} focusedMonitorIdx={focusedMonitorIdx} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef}></FocusedMonitorSettings>
       </div>
-      <ApplySettingsPopup monitorsBeingApplied={[0]} customMonitors={customMonitors} initialMonitors={initialMonitors} normalizePositionsRef={normalizePositionsRef}></ApplySettingsPopup>
+      <ApplySettingsPopup applyChangesRef={applyChangesRef} customMonitors={customMonitors} initialMonitors={initialMonitors} normalizePositionsRef={normalizePositionsRef}></ApplySettingsPopup>
     </div >
   );
 }
