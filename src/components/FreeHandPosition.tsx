@@ -41,6 +41,9 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         appLocal.stage.on('rightupoutside', onScreenDragEnd);
         appLocal.stage.on('pointerup', onDragEnd);
         appLocal.stage.on('pointerupoutside', onDragEnd);
+        //TODO: maybe make it scalable by turning monitorScale into a useRef
+        //https://pixijs.download/dev/docs/events.FederatedWheelEvent.html
+        //appLocal.stage.on('wheel')
         app.current = appLocal;
         rerenderMonitorsContainerRef.current = rerenderMonitors;
         normalizePositionsRef.current = normalizePositions;

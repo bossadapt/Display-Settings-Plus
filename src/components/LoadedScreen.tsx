@@ -11,6 +11,13 @@ interface LoadedProps {
   customMonitors: FrontendMonitor[];
   initialMonitors: MutableRefObject<FrontendMonitor[]>;
   setCustMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
+
+}
+export interface ResetFunctions {
+  enable: Function | null;
+  position: Function | null;
+  rotation: Function | null;
+  mode: Function | null;
 }
 export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMonitors, setCustMonitors }) => {
   const [focusedMonitorIdx, setFocusedMonitorIdx] = useState(0);
@@ -18,6 +25,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
   const screenDragOffsetTotal = useRef<point>({ x: 0, y: 0 });
   const monitorScale = 10;
   const app = useRef<Application<Renderer> | null>(null);
+  const resetFunctions = useRef<ResetFunctions>({ enable: null, position: null, rotation: null, mode: null });
   const applyChangesRef = useRef<Function | null>(null);
   const normalizePositionsRef = useRef<Function | null>(null);
   const rerenderMonitorsContainerRef = useRef<Function | null>(null);
@@ -29,6 +37,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
     { value: 3, label: 'Preset 3' }
   ]
   //Collection handler
+  //TODO: ADD A REFRESH / REGRAB monitors buttons to check for new initial monitor data
   async function applyAll() {
     console.log("applying all");
     await applyPrimaryMonitor();
@@ -90,9 +99,9 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
       </div>
       <hr />
       <div>
-        <FocusedMonitorSettings screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} freeHandPositionCanvas={app} focusedMonitorIdx={focusedMonitorIdx} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef}></FocusedMonitorSettings>
+        <FocusedMonitorSettings resetFunctions={resetFunctions} screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} freeHandPositionCanvas={app} focusedMonitorIdx={focusedMonitorIdx} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef}></FocusedMonitorSettings>
       </div>
-      <ApplySettingsPopup applyChangesRef={applyChangesRef} customMonitors={customMonitors} initialMonitors={initialMonitors} normalizePositionsRef={normalizePositionsRef}></ApplySettingsPopup>
+      <ApplySettingsPopup resetFunctions={resetFunctions} applyChangesRef={applyChangesRef} customMonitors={customMonitors} initialMonitors={initialMonitors} normalizePositionsRef={normalizePositionsRef}></ApplySettingsPopup>
     </div >
   );
 }

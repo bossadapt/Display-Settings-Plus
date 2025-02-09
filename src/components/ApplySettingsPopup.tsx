@@ -2,11 +2,13 @@ import { Dispatch, MutableRefObject, SetStateAction, useEffect, useRef, useState
 import { FrontendMonitor, Rotation } from "../globalValues";
 import { invoke } from "@tauri-apps/api/core";
 import "./ApplySettingsPopup.css"
+import { ResetFunctions } from "./LoadedScreen";
 interface ApplySettingsPopupProps {
     customMonitors: FrontendMonitor[];
     initialMonitors: MutableRefObject<FrontendMonitor[]>;
     normalizePositionsRef: MutableRefObject<Function | null>;
     applyChangesRef: MutableRefObject<Function | null>;
+    resetFunctions: MutableRefObject<ResetFunctions>;
 }
 interface MonitorApplyState {
     overall: AttemptState,
@@ -18,11 +20,14 @@ interface MonitorApplyState {
 enum AttemptState {
     Waiting = "waiting",
     InProgress = "inProgress",
+    Trial = "trialPeriod",
+    Unchanged = "unchanged",
     Completed = "completed",
-    Failed = "failed"
+    Failed = "failed",
+    Undone = "undone"
 }
 interface Attempt {
-    completed: boolean,
+    state: AttemptState,
     reason: string,
 }
 interface FailInfos {
@@ -30,7 +35,7 @@ interface FailInfos {
     settingName: string,
     reason: string
 }
-export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyChangesRef, initialMonitors, normalizePositionsRef }) => {
+export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyChangesRef, initialMonitors, normalizePositionsRef, resetFunctions }) => {
     let defaultMonitorApplyState: MonitorApplyState = {
         overall: AttemptState.Waiting,
         enabled: AttemptState.Waiting,
@@ -46,6 +51,9 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
     const [monitorStates, setMonitorStates] = useState<MonitorApplyState[]>(new Array(initialMonitors.current.length).fill(
         { ...defaultMonitorApplyState }
     ));
+    const [buttonText, setButtonText] = useState("...");
+    const [buttonEnabled, setButtonEnabled] = useState(false);
+    const undoButtonPressed = useRef(false);
     //TODO: add an undo feature(per change, per monitor with sleeps happening inbetween to allow the user to change it)
     //TODO: fix freehand position losing  state
     //TODO: do more testing for combinations of changes
@@ -61,122 +69,146 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
             setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, overall: AttemptState.InProgress, enabled: AttemptState.InProgress } : mon)));
             //enable
             let enableAttempt = await applyEnable(monitorsBeingApplied[i], customMonitors);
-            if (enableAttempt.completed) {
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, enabled: AttemptState.Completed } : mon)));
-            } else {
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, enabled: AttemptState.Failed } : mon)));
+            setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, enabled: enableAttempt.state } : mon)));
+            if (enableAttempt.state === AttemptState.Failed) {
                 failList.current.push({
                     monitorIdx: monitorsBeingApplied[i],
                     settingName: "enabled",
                     reason: enableAttempt.reason
                 });
             }
-            //position
-            setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, position: AttemptState.InProgress } : mon)));
-            let positionAttempt = await applyPosition(monitorsBeingApplied[i], customMonitors);
-            if (positionAttempt.completed) {
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, position: AttemptState.Completed } : mon)));
-            } else {
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, position: AttemptState.Failed } : mon)));
-                failList.current.push({
-                    monitorIdx: monitorsBeingApplied[i],
-                    settingName: "positions",
-                    reason: positionAttempt.reason
-                });
-            }
-            //rotation
-            setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, rotaiton: AttemptState.InProgress } : mon)));
-            let rotationAttempt = await applyRotation(monitorsBeingApplied[i], customMonitors);
-            if (rotationAttempt.completed) {
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, rotaiton: AttemptState.Completed } : mon)));
-            } else {
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, rotaiton: AttemptState.Failed } : mon)));
-                failList.current.push({
-                    monitorIdx: monitorsBeingApplied[i],
-                    settingName: "rotation",
-                    reason: rotationAttempt.reason
-                });
-            }
-            //mode
-            setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, mode: AttemptState.InProgress } : mon)));
-            let modeAttempt = await applyModePreset(monitorsBeingApplied[i], customMonitors);
-            if (modeAttempt.completed) {
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, mode: AttemptState.Completed } : mon)));
-            } else {
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, mode: AttemptState.Failed } : mon)));
-                failList.current.push({
-                    monitorIdx: monitorsBeingApplied[i],
-                    settingName: "mode",
-                    reason: modeAttempt.reason
-                });
-            }
+            if (enableAttempt.state === AttemptState.Unchanged) {
+                //position
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, position: AttemptState.InProgress } : mon)));
+                let positionAttempt = await applyPosition(monitorsBeingApplied[i], customMonitors, true);
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, position: positionAttempt.state } : mon)));
+                if (positionAttempt.state === AttemptState.Failed) {
+                    failList.current.push({
+                        monitorIdx: monitorsBeingApplied[i],
+                        settingName: "positions",
+                        reason: positionAttempt.reason
+                    });
+                }
+                //rotation
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, rotaiton: AttemptState.InProgress } : mon)));
+                let rotationAttempt = await applyRotation(monitorsBeingApplied[i], customMonitors, true);
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, rotaiton: rotationAttempt.state } : mon)));
 
+                if (rotationAttempt.state === AttemptState.Failed) {
+                    failList.current.push({
+                        monitorIdx: monitorsBeingApplied[i],
+                        settingName: "rotation",
+                        reason: rotationAttempt.reason
+                    });
+                }
+                //mode
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, mode: AttemptState.InProgress } : mon)));
+                let modeAttempt = await applyModePreset(monitorsBeingApplied[i], customMonitors, true);
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, mode: modeAttempt.state } : mon)));
+                if (modeAttempt.state === AttemptState.Failed) {
+                    failList.current.push({
+                        monitorIdx: monitorsBeingApplied[i],
+                        settingName: "mode",
+                        reason: modeAttempt.reason
+                    });
+                }
+            } else {
+                //enable was enacted
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, rotaiton: AttemptState.Completed, position: AttemptState.Completed, mode: AttemptState.Completed } : mon)));
+            }
+            //overall
+            if (failList.current.findIndex((fail) => (fail.monitorIdx === monitorsBeingApplied[i]))) {
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, overall: AttemptState.Failed } : mon)));
+            } else {
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, overall: AttemptState.Completed } : mon)));
+            }
         }
         setShowPopup(false);
         console.log("Pop up closing");
     }
     async function applyEnable(focusedMonitorIdx: number, customMonitors: FrontendMonitor[]): Promise<Attempt> {
         let newMonitorEnabledSetting = customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid !== 0;
-        let output: Attempt = { completed: true, reason: "" };
+        let output: Attempt = { state: AttemptState.Unchanged, reason: "" };
         console.log("apply enabled called on ", focusedMonitorIdx);
         if (!(newMonitorEnabledSetting === (initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.xid !== 0))) {
             console.log("enable internal called");
             await invoke("set_enabled", {
                 xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
                 enabled: newMonitorEnabledSetting
-            }).then(() => {
-                if (!newMonitorEnabledSetting) {
-                    initialMonitors.current[focusedMonitorIdx].outputs[0].xid = 0;
-                    initialMonitors.current[focusedMonitorIdx].x = 0;
-                    initialMonitors.current[focusedMonitorIdx].y = 0;
-                    initialMonitors.current[focusedMonitorIdx].outputs[0].rotation = Rotation.Normal;
-                    if (initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode) {
-                        initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.width = initialMonitors.current[focusedMonitorIdx].widthPx;
-                        initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.height = initialMonitors.current[focusedMonitorIdx].heightPx;
-                    }
-                } else {
-                    /*
-                    crtc.mode = mode.xid;
-                    crtc.width = mode.width;
-                    crtc.height = mode.height;
-                    */
-                    let prefMode = initialMonitors.current[focusedMonitorIdx].outputs[0].preferredModes[0];
-                    initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode = prefMode;
-                    initialMonitors.current[focusedMonitorIdx].widthPx = prefMode.width;
-                    initialMonitors.current[focusedMonitorIdx].heightPx = prefMode.height;
-
-                    //TODO: add custom modes in here to apply this
-
+            }).then(async () => {
+                if (await promptUserToUndo()) {
+                    resetFunctions.current.enable!(focusedMonitorIdx);
+                    await invoke("set_enabled", {
+                        xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
+                        enabled: newMonitorEnabledSetting
+                    });
+                    applyPosition(focusedMonitorIdx, customMonitors, false);
+                    applyRotation(focusedMonitorIdx, customMonitors, false);
+                    output = { state: AttemptState.Undone, reason: "" };
                 }
-                output = { completed: true, reason: "" };
+                else {
+                    if (!newMonitorEnabledSetting) {
+                        initialMonitors.current[focusedMonitorIdx].outputs[0].xid = 0;
+                        initialMonitors.current[focusedMonitorIdx].x = 0;
+                        initialMonitors.current[focusedMonitorIdx].y = 0;
+                        initialMonitors.current[focusedMonitorIdx].outputs[0].rotation = Rotation.Normal;
+                        if (initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode) {
+                            initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.width = initialMonitors.current[focusedMonitorIdx].widthPx;
+                            initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.height = initialMonitors.current[focusedMonitorIdx].heightPx;
+                        }
+                    } else {
+                        /*
+                        crtc.mode = mode.xid;
+                        crtc.width = mode.width;
+                        crtc.height = mode.height;
+                        */
+                        let prefMode = initialMonitors.current[focusedMonitorIdx].outputs[0].preferredModes[0];
+                        initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode = prefMode;
+                        initialMonitors.current[focusedMonitorIdx].widthPx = prefMode.width;
+                        initialMonitors.current[focusedMonitorIdx].heightPx = prefMode.height;
+
+                    }
+                    output = { state: AttemptState.Completed, reason: "" };
+                }
             }).catch((reason) => {
-                output = { completed: false, reason: reason };
+                output = { state: AttemptState.Failed, reason: reason };
             });
         }
         return output;
 
     }
-    async function applyRotation(focusedMonitorIdx: number, customMonitors: FrontendMonitor[]): Promise<Attempt> {
-        let output: Attempt = { completed: true, reason: "" };
+    async function applyRotation(focusedMonitorIdx: number, customMonitors: FrontendMonitor[], shouldPromptRedo: boolean): Promise<Attempt> {
+        let output: Attempt = { state: AttemptState.Unchanged, reason: "" };
         console.log("apply rotation called on ", focusedMonitorIdx);
         if (!(customMonitors[focusedMonitorIdx].outputs[0].rotation == initialMonitors.current[focusedMonitorIdx].outputs[0].rotation)) {
             console.log("rotation internal called");
             await invoke("set_rotation", {
                 xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
                 rotation: customMonitors[focusedMonitorIdx].outputs[0].rotation
-            }).then(() => {
-                initialMonitors.current[focusedMonitorIdx].outputs[0].rotation = customMonitors[focusedMonitorIdx].outputs[0].rotation;
-                output = { completed: true, reason: "" };
+            }).then(async () => {
+                if (shouldPromptRedo && await promptUserToUndo()) {
+                    //TODO: ensure these functions are non null before starting popup
+                    resetFunctions.current.rotation!(focusedMonitorIdx);
+                    await invoke("set_rotation", {
+                        xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
+                        rotation: customMonitors[focusedMonitorIdx].outputs[0].rotation
+                    });
+                    output = { state: AttemptState.Undone, reason: "" };
+                } else {
+                    initialMonitors.current[focusedMonitorIdx].outputs[0].rotation = customMonitors[focusedMonitorIdx].outputs[0].rotation;
+                    output = { state: AttemptState.Completed, reason: "" };
+
+                }
             }).catch((reason) => {
-                output = { completed: false, reason: reason };
+                output = { state: AttemptState.Failed, reason: reason };
             });
         }
         return output;
     }
-    async function applyPosition(focusedMonitorIdx: number, customMonitors: FrontendMonitor[]): Promise<Attempt> {
+    async function applyPosition(focusedMonitorIdx: number, customMonitors: FrontendMonitor[], shouldPromptRedo: boolean): Promise<Attempt> {
         //TODO: ensure that freehand position comes before any of the other screens
         console.log("apply positions called on ", focusedMonitorIdx);
-        let output: Attempt = { completed: true, reason: "" };
+        let output: Attempt = { state: AttemptState.Unchanged, reason: "" };
         console.log("position function called");
         console.log("initial X:", initialMonitors.current[focusedMonitorIdx].x, "| Y:", initialMonitors.current[focusedMonitorIdx].y);
         console.log("cust X:", customMonitors[focusedMonitorIdx].x, "| Y:", customMonitors[focusedMonitorIdx].y);
@@ -191,43 +223,86 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
                 xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
                 x: customMonitors[focusedMonitorIdx].x,
                 y: customMonitors[focusedMonitorIdx].y
-            }).then(() => {
-                initialMonitors.current[focusedMonitorIdx].x = customMonitors[focusedMonitorIdx].x;
-                initialMonitors.current[focusedMonitorIdx].y = customMonitors[focusedMonitorIdx].y;
-                output = { completed: true, reason: "" };
+            }).then(async () => {
+                if (shouldPromptRedo && await promptUserToUndo()) {
+                    resetFunctions.current.position!(focusedMonitorIdx);
+                    await invoke("set_position", {
+                        xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
+                        x: customMonitors[focusedMonitorIdx].x,
+                        y: customMonitors[focusedMonitorIdx].y
+                    })
+                    output = { state: AttemptState.Undone, reason: "" };
+                } else {
+                    initialMonitors.current[focusedMonitorIdx].x = customMonitors[focusedMonitorIdx].x;
+                    initialMonitors.current[focusedMonitorIdx].y = customMonitors[focusedMonitorIdx].y;
+                    output = { state: AttemptState.Completed, reason: "" };
+                }
             }).catch((reason) => {
-                output = { completed: false, reason: reason };
+                output = { state: AttemptState.Failed, reason: reason };
             });
         }
         return output;
     }
-    async function applyModePreset(focusedMonitorIdx: number, customMonitors: FrontendMonitor[]): Promise<Attempt> {
-        let output: Attempt = { completed: true, reason: "" };
+    async function applyModePreset(focusedMonitorIdx: number, customMonitors: FrontendMonitor[], shouldPromptRedo: boolean): Promise<Attempt> {
+        let output: Attempt = { state: AttemptState.Unchanged, reason: "" };
         console.log("apply mode called on ", focusedMonitorIdx);
         if (!(customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid == initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.xid)) {
             console.log("mode internal called");
             await invoke("set_mode", {
                 outputXid: customMonitors[focusedMonitorIdx].outputs[0].xid,
                 mode: customMonitors[focusedMonitorIdx].outputs[0].modes.find((mode) => (mode.xid === customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid))
-            }).then(() => {
-                initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode! = customMonitors[focusedMonitorIdx].outputs[0].currentMode!;
-                output = { completed: true, reason: "" };
+            }).then(async () => {
+                if (shouldPromptRedo && await promptUserToUndo()) {
+                    resetFunctions.current.mode!(focusedMonitorIdx);
+                    await invoke("set_mode", {
+                        outputXid: customMonitors[focusedMonitorIdx].outputs[0].xid,
+                        mode: customMonitors[focusedMonitorIdx].outputs[0].modes.find((mode) => (mode.xid === customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid))
+                    });
+                    output = { state: AttemptState.Undone, reason: "" };
+                } else {
+                    initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode! = customMonitors[focusedMonitorIdx].outputs[0].currentMode!;
+                    output = { state: AttemptState.Completed, reason: "" };
+                }
             }).catch((reason) => {
-                output = { completed: false, reason: reason };
+                output = { state: AttemptState.Failed, reason: reason };
             });
         }
         return output;
     }
 
+    //https://stackoverflow.com/questions/37764665/how-to-implement-sleep-function-in-typescript
+    const secondsToUndo = 15;
+    async function promptUserToUndo(): Promise<boolean> {
+        setButtonEnabled(true);
+        undoButtonPressed.current = false;
+        for (let i = secondsToUndo; i > -1; i--) {
+            if (undoButtonPressed.current) {
+                setButtonText("...");
+                return true;
+            } else {
+                setButtonText("Undo(" + i + ")");
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        setButtonText("...");
+        return false;
+
+    }
     return (<div className="popup" style={{ display: showPopup ? "block" : "none" }}>
         <div className="popupContentsContainer" >
-            <h1 style={{ marginLeft: "auto", marginRight: "auto" }}>Applying Settings</h1>
-            <div style={{ display: "flex", flexDirection: "row", width: "100%" }}>
+            <h1 className="popupTitle">Applying Settings</h1>
+            {/* for explaing legends but looks ugly
+            <div className="legendsContainer">
                 <h4 className="legendsText" id={AttemptState.Waiting}>Waiting</h4>
                 <h4 className="legendsText" id={AttemptState.InProgress}>In Progress</h4>
+                <h4 className="legendsText" id={AttemptState.Trial}>Trial Period</h4>
+            </div>
+            <div className="legendsContainer">
+                <h4 className="legendsText" id={AttemptState.Undone}>Undone</h4>
                 <h4 className="legendsText" id={AttemptState.Completed}>Completed</h4>
                 <h4 className="legendsText" id={AttemptState.Failed}>Failed</h4>
             </div>
+            */}
             <div className="monitorStatesContainer">
                 {initialMonitors.current.map((mon, idx) => (<div className="monitorState" >
                     <h2 id={monitorStates[idx].overall}>{mon.name}</h2>
@@ -238,6 +313,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
                     <h4 id={monitorStates[idx].mode} >Mode:{monitorStates[idx].mode}</h4>
                 </div>))}
             </div>
+            <button className="undoButton" disabled={!buttonEnabled} onClick={() => { undoButtonPressed.current = true }}>{buttonText}</button>
         </div>
     </div>)
 
