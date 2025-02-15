@@ -11,6 +11,7 @@ interface LoadedProps {
   monitorRefreshRef: MutableRefObject<Function>;
   customMonitors: FrontendMonitor[];
   initialMonitors: MutableRefObject<FrontendMonitor[]>;
+  presets: MutableRefObject<FrontendMonitor[][]>;
   setCustMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
 
 }
@@ -20,27 +21,21 @@ export interface ResetFunctions {
   rotation: Function | null;
   mode: Function | null;
 }
-export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customMonitors, initialMonitors, setCustMonitors }) => {
+export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customMonitors, initialMonitors, presets, setCustMonitors }) => {
   const [focusedMonitorIdx, setFocusedMonitorIdx] = useState(0);
-  const [focusedPreset, setFocusedPreset] = useState(0);
+  const [focusedPresetIdx, setFocusedPresetIdx] = useState(0);
   const screenDragOffsetTotal = useRef<point>({ x: 0, y: 0 });
   const monitorScale = 10;
   const app = useRef<Application<Renderer> | null>(null);
   const resetFunctions = useRef<ResetFunctions>({ enable: null, position: null, rotation: null, mode: null });
   const applyChangesRef = useRef<Function | null>(null);
-  const normalizePositionsRef = useRef<Function | null>(null);
+  const normalizePositionsRef = useRef<((customMonitors: FrontendMonitor[]) => void) | null>(null);
   const rerenderMonitorsContainerRef = useRef<Function | null>(null);
   //TODO: implement presets system
-  const presetsOptions = [
-    { value: 0, label: 'Preset 0' },
-    { value: 1, label: 'Preset 1' },
-    { value: 2, label: 'Preset 2' },
-    { value: 3, label: 'Preset 3' }
-  ]
+  const presetsOptions = presets.current.map((_preset, idx) => ({ value: idx, label: "Preset " + idx }));
   //Collection handler
   async function applyAll() {
-    console.log("applying all");
-    console.log("before initial:");
+    console.log("apply all called")
     await applyPrimaryMonitor();
     if (applyChangesRef.current) {
       console.log("applying all exists");
@@ -77,14 +72,44 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
     }
   }
   //
-  //
+  function setFocusedPreset(presetSelected: number) {
+    console.log("setFocus to " + presetSelected);
+    let newMons: FrontendMonitor[] = [];
+    for (let i = 0; i < customMonitors.length; i++) {
+      let presetAttempt = presets.current[presetSelected].find((presetMon) => (customMonitors[i].name === presetMon.name));
+      if (presetAttempt) {
+        console.log("monitor number ", i, " was overwritten");
+      }
+      newMons.push(presetAttempt ? { ...presetAttempt } : customMonitors[i])
+    }
+    setCustMonitors(newMons);
+    setFocusedPresetIdx(presetSelected);
+    if (rerenderMonitorsContainerRef.current)
+      rerenderMonitorsContainerRef.current(newMons);
+  }
+  function overwriteFocusedPreset() {
+    invoke<FrontendMonitor[][]>("overwrite_preset", {
+      idx: focusedPresetIdx,
+      newPreset: customMonitors
+    }).then((_res) => {
+      presets.current[focusedPresetIdx] = customMonitors;
+    }).catch((err) => {
+      console.error(err);
+    });
+  }
+  function resetAll() {
+    setCustMonitors([...initialMonitors.current]);
+    if (rerenderMonitorsContainerRef.current)
+      rerenderMonitorsContainerRef.current(initialMonitors.current);
+  }
   return (
     //presets dropdown yoinked from https://react-select.com/home
     <div className="loadedMain">
       <div style={{ display: "flex", flexDirection: "row" }}>
-        <Select options={presetsOptions} theme={customSelectTheme} defaultValue={{ value: -1, label: 'TODO' }}></Select>
-        <button style={{ color: "hotpink" }}>Save Preset</button>
-        <button style={{ color: "hotpink", marginLeft: "auto" }} onClick={() => { monitorRefreshRef.current() }}>Refresh All</button>
+        <Select onChange={(eve) => { eve ? setFocusedPreset(eve.value) : {} }} options={presetsOptions} value={presetsOptions[focusedPresetIdx]} theme={customSelectTheme}></Select>
+        <button style={{ color: "hotpink" }} onClick={overwriteFocusedPreset}>Overwrite Preset</button>
+        <button style={{ color: "hotpink", marginLeft: "auto" }} onClick={resetAll}>Reset All</button>
+        <button style={{ color: "hotpink" }} onClick={() => { monitorRefreshRef.current() }}>Refresh All</button>
         <button style={{ color: "hotpink" }} onClick={applyAll}>Apply All Changes</button>
       </div>
       <hr style={{ marginTop: "10px", marginBottom: "10px" }} />

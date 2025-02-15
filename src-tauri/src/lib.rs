@@ -1,53 +1,57 @@
-use serde::Serialize;
-use tauri::async_runtime::handle;
+use std::{
+    fs::File,
+    io::{self, BufWriter, ErrorKind},
+};
+
+use serde::{Deserialize, Serialize};
 use xrandr::{Mode, Rotation, ScreenResources, XHandle, XId, XTime, XrandrError};
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 //added this to serialize without editing the library
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct FrontendMonitor {
     name: String,
-    #[serde(rename(serialize = "isPrimary"))]
+    #[serde(rename = "isPrimary")]
     is_primary: bool,
-    #[serde(rename(serialize = "isAutomatic"))]
+    #[serde(rename = "isAutomatic")]
     is_automatic: bool,
     x: i32,
     y: i32,
-    #[serde(rename(serialize = "widthPx"))]
+    #[serde(rename = "widthPx")]
     width_px: i32,
-    #[serde(rename(serialize = "heightPx"))]
+    #[serde(rename = "heightPx")]
     height_px: i32,
-    #[serde(rename(serialize = "widthMm"))]
+    #[serde(rename = "widthMm")]
     width_mm: i32,
-    #[serde(rename(serialize = "heightMm"))]
+    #[serde(rename = "heightMm")]
     height_mm: i32,
     /// An Output describes an actual physical monitor or display. A [`Monitor`]
     /// can have more than one output.
     outputs: Vec<FrontendOutput>,
 }
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct FrontendOutput {
     xid: XId,
     timestamp: XTime,
-    #[serde(rename(serialize = "isPrimary"))]
+    #[serde(rename = "isPrimary")]
     is_primary: bool,
     //might not want to pass this to the frontend in the future
     crtc: Option<XId>,
     //derived from crtc
     rotation: Rotation,
     name: String,
-    #[serde(rename(serialize = "mmWidth"))]
+    #[serde(rename = "mmWidth")]
     mm_width: u64,
-    #[serde(rename(serialize = "mmHeight"))]
+    #[serde(rename = "mmHeight")]
     mm_height: u64,
     connected: bool,
-    #[serde(rename(serialize = "subpixelOrder"))]
+    #[serde(rename = "subpixelOrder")]
     subpixel_order: u16,
     crtcs: Vec<XId>,
     clones: Vec<XId>,
     modes: Vec<Mode>,
-    #[serde(rename(serialize = "preferredModes"))]
+    #[serde(rename = "preferredModes")]
     preferred_modes: Vec<Mode>,
-    #[serde(rename(serialize = "currentMode"))]
+    #[serde(rename = "currentMode")]
     current_mode: Option<Mode>,
 }
 //dropping properties because its too extra for someone editing settings via gui to care
@@ -177,6 +181,61 @@ async fn set_mode(output_xid: u64, mode: Mode) -> Result<(), XrandrError> {
     xhandle.set_mode(&focused_output, &mode)?;
     return Ok(());
 }
+#[tauri::command]
+async fn get_presets() -> Result<Vec<Vec<FrontendMonitor>>, String> {
+    let mut presets: Vec<Vec<FrontendMonitor>> = Vec::new();
+    for i in 0..5 {
+        let file_name = format!("./Preset{i}.json");
+        let cur_file = File::open(&file_name);
+        match cur_file {
+            Ok(file) => {
+                presets.push(serde_json::from_reader(file).unwrap_or_default());
+            }
+            Err(err) => match err.kind() {
+                ErrorKind::NotFound => {
+                    let new_frontend_monitor_list: Vec<FrontendMonitor> = Vec::new();
+                    let new_file = File::create(file_name);
+                    if let Ok(new_file) = new_file {
+                        let mut writer = BufWriter::new(new_file);
+                        let to_writer_attempt =
+                            serde_json::to_writer(&mut writer, &new_frontend_monitor_list);
+                        if let Err(err) = to_writer_attempt {
+                            return Err(err.to_string());
+                        }
+                        if io::Write::flush(&mut writer).is_err() {
+                            return Err("Failed to flush wrtier".to_owned());
+                        }
+                        presets.push(new_frontend_monitor_list);
+                    } else {
+                        return Err(new_file.err().unwrap().to_string());
+                    }
+                }
+                _ => {
+                    return Err(err.to_string());
+                }
+            },
+        }
+    }
+    return Ok(presets);
+}
+#[tauri::command]
+async fn overwrite_preset(idx: i32, new_preset: Vec<FrontendMonitor>) -> Result<(), String> {
+    let file_name = format!("./Preset{idx}.json");
+    let new_file = File::create(file_name);
+    if let Ok(new_file) = new_file {
+        let mut writer = BufWriter::new(new_file);
+        let to_writer_attempt = serde_json::to_writer(&mut writer, &new_preset);
+        if let Err(err) = to_writer_attempt {
+            return Err(err.to_string());
+        }
+        let flush_attempt = io::Write::flush(&mut writer);
+        if let Err(err) = flush_attempt {
+            return Err(err.to_string());
+        }
+    } else {
+    }
+    return Ok(());
+}
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -188,7 +247,9 @@ pub fn run() {
             set_position,
             set_rotation,
             set_mode,
-            set_enable
+            set_enable,
+            get_presets,
+            overwrite_preset
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,5 +1,5 @@
 import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, Renderer, BitmapText } from 'pixi.js';
-import { useState, useRef, Dispatch, SetStateAction, MutableRefObject } from 'react';
+import { useState, useRef, Dispatch, SetStateAction, MutableRefObject, useEffect } from 'react';
 import { FrontendMonitor, point, Rotation } from '../globalValues';
 
 interface FreeHandPositionProps {
@@ -10,9 +10,9 @@ interface FreeHandPositionProps {
     screenDragOffsetTotal: MutableRefObject<point>;
     setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
     rerenderMonitorsContainerRef: MutableRefObject<Function | null>;
-    normalizePositionsRef: MutableRefObject<Function | null>;
+    normalizePositionsRef: MutableRefObject<((customMonitors: FrontendMonitor[]) => void) | null>;
 }
-export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOffsetTotal, monitorScale, app, initialMonitors, customMonitors, setMonitors, rerenderMonitorsContainerRef, normalizePositionsRef }) => {
+export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOffsetTotal, monitorScale, app, initialMonitors, customMonitors, setMonitors: setCustMonitors, rerenderMonitorsContainerRef, normalizePositionsRef }) => {
     // within 10 px of another mon will cause a snap
     const snapPixelLength = 50;
     const dragTarget = useRef<null | Container<ContainerChild>>(null)
@@ -45,9 +45,9 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         //https://pixijs.download/dev/docs/events.FederatedWheelEvent.html
         //appLocal.stage.on('wheel')
         app.current = appLocal;
-        rerenderMonitorsContainerRef.current = rerenderMonitors;
-        normalizePositionsRef.current = normalizePositions;
+
     }
+
     //TODO: maybe add the grid and fix the frequency of lines and make the move 
     // function createGrid(appLocal: Application<Renderer>) {
     //     let grid = new Graphics();
@@ -82,7 +82,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
 
     // }
     function updateGlobalPosition(monitorName: string, x: number, y: number) {
-        setMonitors((mons) =>
+        setCustMonitors((mons) =>
             mons.map((curMon) =>
                 curMon.name === monitorName
                     ? { ...curMon, y: Math.round(y), x: Math.round(x) }
@@ -345,7 +345,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
                 mon.y = initialMonitors.current[idx].y / monitorScale;
             }));
         }
-        setMonitors((mons) => mons.map((curMon, idx) => ({ ...curMon, x: initialMonitors.current[idx].x, y: initialMonitors.current[idx].y })));
+        setCustMonitors((mons) => mons.map((curMon, idx) => ({ ...curMon, x: initialMonitors.current[idx].x, y: initialMonitors.current[idx].y })));
         screenDragOffsetTotal.current.x = 0;
         screenDragOffsetTotal.current.y = 0;
     }
@@ -358,7 +358,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         snapEnabledRef.current = !snapEnabledRef.current;
     };
     ///Used to make it so the farthest left monitor starts at zero x and and lowest monitor to start at zero(adjusting all other monitors accordingly)
-    function normalizePositions() {
+    function normalizePositions(customMonitors: FrontendMonitor[]) {
         if (app.current) {
             //console.log("initial XX:", initialMonitors.current[focusedMonitorIdx].x, "| YY:", initialMonitors.current[focusedMonitorIdx].y);
             let minOffsetY = Number.MAX_VALUE;
@@ -384,13 +384,18 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
                 newMonitors[idx].x = mon.x * monitorScale;
                 newMonitors[idx].y = mon.y * monitorScale;
             });
-            setMonitors(newMonitors);
+            setCustMonitors(newMonitors);
             screenDragOffsetTotal.current.x = 0;
             screenDragOffsetTotal.current.y = 0;
             //console.log("initial XX:", initialMonitors.current[focusedMonitorIdx].x, "| YY:", initialMonitors.current[focusedMonitorIdx].y);
-
         }
     }
+
+    useEffect(() => {
+        rerenderMonitorsContainerRef.current = rerenderMonitors;
+        normalizePositionsRef.current = normalizePositions;
+    }, [rerenderMonitors, normalizePositions])
+
     return (
         <div style={{ display: 'flex', flexDirection: "row" }}>
             <p style={{ width: "20vw", height: "50vh" }}><b>Controls:</b> <br /><br />
@@ -410,7 +415,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
                 <p style={{ width: "20vw", height: "10vh" }}> <b>Additional Functions:</b></p>
                 <button style={{ width: "20vw", height: "10vh" }} onClick={resetMonitorsPositions}>Reset Monitor Positions</button>
                 <button style={{ width: "20vw", height: "10vh" }} onClick={resetCameraPosition}>Reset Camera Position</button>
-                <button style={{ width: "20vw", height: "10vh" }} onClick={normalizePositions}>Normalize Positions</button>
+                <button style={{ width: "20vw", height: "10vh" }} onClick={() => normalizePositions(customMonitors)}>Normalize Positions</button>
                 <button style={{ width: "20vw", height: "10vh", color: snapEnabled ? 'hotpink' : '#3B3B3B' }} onClick={toggleSnap}>Toggle Snap</button>
             </div>
         </div >

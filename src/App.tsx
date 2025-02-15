@@ -10,6 +10,7 @@ function App() {
   const didInit = useRef(false);
   const refreshMonitorsRef = useRef<Function>(refreshMonitors);
   const initialMonitorsInfo = useRef<FrontendMonitor[]>([]);
+  const presets = useRef<FrontendMonitor[][]>([]);
 
   //-1 for cases where there are no monitors
 
@@ -25,6 +26,7 @@ function App() {
       return;
     }
     didInit.current = true;
+    getPresets();
     refreshMonitors();
   }, []);
   // let the loading screen do the work instead of busywait it
@@ -34,9 +36,17 @@ function App() {
     setCustomMonitorsInfo([]);
     invoke<FrontendMonitor[]>("get_monitors", {}).then((res) => {
       res = handleRotations(res);
-      initialMonitorsInfo.current = res;
+      initialMonitorsInfo.current = [...res];
       setCustomMonitorsInfo(res);
       console.log(res);
+    });
+  }
+  async function getPresets() {
+    console.log("getPresets called")
+    invoke<FrontendMonitor[][]>("get_presets", {}).then((res) => {
+      presets.current = res;
+    }).catch((err) => {
+      console.error(err);
     });
   }
   function handleRotations(input: FrontendMonitor[]): FrontendMonitor[] {
@@ -48,7 +58,7 @@ function App() {
     );
   }
   return (
-    <div>{customMonitorsInfo.length != 0 ? <LoadedScreen monitorRefreshRef={refreshMonitorsRef} customMonitors={customMonitorsInfo} initialMonitors={initialMonitorsInfo} setCustMonitors={setCustomMonitorsInfo} /> : <LoadingScreen />}</div>
+    <div>{customMonitorsInfo.length != 0 ? <LoadedScreen presets={presets} monitorRefreshRef={refreshMonitorsRef} customMonitors={customMonitorsInfo} initialMonitors={initialMonitorsInfo} setCustMonitors={setCustomMonitorsInfo} /> : <LoadingScreen />}</div>
   );
 }
 

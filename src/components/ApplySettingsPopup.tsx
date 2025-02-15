@@ -6,7 +6,7 @@ import { ResetFunctions } from "./LoadedScreen";
 interface ApplySettingsPopupProps {
     customMonitors: FrontendMonitor[];
     initialMonitors: MutableRefObject<FrontendMonitor[]>;
-    normalizePositionsRef: MutableRefObject<Function | null>;
+    normalizePositionsRef: MutableRefObject<((customMonitors: FrontendMonitor[]) => void) | null>;
     applyChangesRef: MutableRefObject<Function | null>;
     resetFunctions: MutableRefObject<ResetFunctions>;
 }
@@ -209,27 +209,19 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
     }
     async function applyPosition(focusedMonitorIdx: number, customMonitors: FrontendMonitor[], shouldPromptRedo: boolean): Promise<Attempt> {
         //TODO: ensure that freehand position comes before any of the other screens
-        console.log("apply positions called on ", focusedMonitorIdx);
         let output: Attempt = { state: AttemptState.Unchanged, reason: "" };
         console.log("position function called");
-        console.log("initial X:", initialMonitors.current[focusedMonitorIdx].x, "| Y:", initialMonitors.current[focusedMonitorIdx].y);
-        console.log("cust X:", customMonitors[focusedMonitorIdx].x, "| Y:", customMonitors[focusedMonitorIdx].y);
         if (!(customMonitors[focusedMonitorIdx].x === initialMonitors.current[focusedMonitorIdx].x
             && customMonitors[focusedMonitorIdx].y === initialMonitors.current[focusedMonitorIdx].y)) {
             console.log("positions internal called");
             if (normalizePositionsRef.current) {
-                normalizePositionsRef.current();
+                normalizePositionsRef.current(customMonitors);
             }
-            console.log("initial x:" + initialMonitors.current[focusedMonitorIdx].x + ", initial y:" + initialMonitors.current[focusedMonitorIdx].y)
-            console.log("cust x:" + customMonitors[focusedMonitorIdx].x + ", cust y:" + customMonitors[focusedMonitorIdx].y)
-            console.log("checks passed");
             await invoke("set_position", {
                 outputCrtc: customMonitors[focusedMonitorIdx].outputs[0].crtc,
                 x: customMonitors[focusedMonitorIdx].x,
                 y: customMonitors[focusedMonitorIdx].y
             }).then(async () => {
-                console.log("initial2 x:" + initialMonitors.current[focusedMonitorIdx].x + ", initial y:" + initialMonitors.current[focusedMonitorIdx].y)
-                console.log("cust2 x:" + customMonitors[focusedMonitorIdx].x + ", cust y:" + customMonitors[focusedMonitorIdx].y)
                 if (shouldPromptRedo && await promptUserToUndo()) {
                     console.log("internals of redo func called")
                     await resetFunctions.current.position!(focusedMonitorIdx);
@@ -243,8 +235,6 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
                 } else {
                     initialMonitors.current[focusedMonitorIdx].x = customMonitors[focusedMonitorIdx].x;
                     initialMonitors.current[focusedMonitorIdx].y = customMonitors[focusedMonitorIdx].y;
-                    console.log("initial3 x:" + initialMonitors.current[focusedMonitorIdx].x + ", initial y:" + initialMonitors.current[focusedMonitorIdx].y)
-                    console.log("cust3 x:" + customMonitors[focusedMonitorIdx].x + ", cust y:" + customMonitors[focusedMonitorIdx].y)
                     output = { state: AttemptState.Completed, reason: "" };
                 }
             }).catch((reason) => {
