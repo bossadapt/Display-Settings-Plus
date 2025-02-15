@@ -8,6 +8,7 @@ import { Application, Renderer } from "pixi.js";
 import { invoke } from "@tauri-apps/api/core";
 import ApplySettingsPopup from "./ApplySettingsPopup";
 interface LoadedProps {
+  monitorRefreshRef: MutableRefObject<Function>;
   customMonitors: FrontendMonitor[];
   initialMonitors: MutableRefObject<FrontendMonitor[]>;
   setCustMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
@@ -19,7 +20,7 @@ export interface ResetFunctions {
   rotation: Function | null;
   mode: Function | null;
 }
-export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMonitors, setCustMonitors }) => {
+export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customMonitors, initialMonitors, setCustMonitors }) => {
   const [focusedMonitorIdx, setFocusedMonitorIdx] = useState(0);
   const [focusedPreset, setFocusedPreset] = useState(0);
   const screenDragOffsetTotal = useRef<point>({ x: 0, y: 0 });
@@ -29,7 +30,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
   const applyChangesRef = useRef<Function | null>(null);
   const normalizePositionsRef = useRef<Function | null>(null);
   const rerenderMonitorsContainerRef = useRef<Function | null>(null);
-  //TODO: make this more legit later
+  //TODO: implement presets system
   const presetsOptions = [
     { value: 0, label: 'Preset 0' },
     { value: 1, label: 'Preset 1' },
@@ -37,15 +38,18 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
     { value: 3, label: 'Preset 3' }
   ]
   //Collection handler
-  //TODO: ADD A REFRESH / REGRAB monitors buttons to check for new initial monitor data
   async function applyAll() {
     console.log("applying all");
+    console.log("before initial:");
     await applyPrimaryMonitor();
     if (applyChangesRef.current) {
       console.log("applying all exists");
-      applyChangesRef.current(customMonitors, customMonitors.map((_mon, idx) => (idx)));
+      await applyChangesRef.current(customMonitors, customMonitors.map((_mon, idx) => (idx)));
     }
+    console.log("after initial:");
+    console.log(initialMonitors.current);
   }
+
   //PRIMARY MONITOR
   const monitorOptions = customMonitors.map((mon) => { return { value: mon.name, label: mon.name } })
   function setPrimaryMonitor(newPrimName: String | undefined) {
@@ -78,9 +82,10 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
     //presets dropdown yoinked from https://react-select.com/home
     <div className="loadedMain">
       <div style={{ display: "flex", flexDirection: "row" }}>
-        <Select options={presetsOptions} theme={customSelectTheme}></Select>
+        <Select options={presetsOptions} theme={customSelectTheme} defaultValue={{ value: -1, label: 'TODO' }}></Select>
         <button style={{ color: "hotpink" }}>Save Preset</button>
-        <button style={{ marginLeft: "auto", color: "hotpink" }} onClick={applyAll}>Apply All Changes</button>
+        <button style={{ color: "hotpink", marginLeft: "auto" }} onClick={() => { monitorRefreshRef.current() }}>Refresh All</button>
+        <button style={{ color: "hotpink" }} onClick={applyAll}>Apply All Changes</button>
       </div>
       <hr style={{ marginTop: "10px", marginBottom: "10px" }} />
       <div style={{ display: "flex", flexDirection: "row" }}>
@@ -90,7 +95,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ customMonitors, initialMon
         <button onClick={applyPrimaryMonitor}>Apply</button>
       </div>
       <hr />
-      <FreeHandPosition screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} app={app} customMonitors={customMonitors} initialMonitors={initialMonitors.current} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef} normalizePositionsRef={normalizePositionsRef}></FreeHandPosition>
+      <FreeHandPosition screenDragOffsetTotal={screenDragOffsetTotal} monitorScale={monitorScale} app={app} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef} normalizePositionsRef={normalizePositionsRef}></FreeHandPosition>
       <hr />
       <div>
         <h2>Focused Monitor Settings</h2>

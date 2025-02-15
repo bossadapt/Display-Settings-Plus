@@ -54,7 +54,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
     const [buttonText, setButtonText] = useState("...");
     const [buttonEnabled, setButtonEnabled] = useState(false);
     const undoButtonPressed = useRef(false);
-    //TODO: add an undo feature(per change, per monitor with sleeps happening inbetween to allow the user to change it)
+    //TODO: fix undo feature
     //TODO: fix freehand position losing  state
     //TODO: do more testing for combinations of changes
     //TODO: possibly diable the scrolling happening in the background
@@ -117,13 +117,15 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
                 setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, rotaiton: AttemptState.Completed, position: AttemptState.Completed, mode: AttemptState.Completed } : mon)));
             }
             //overall
-            if (failList.current.findIndex((fail) => (fail.monitorIdx === monitorsBeingApplied[i]))) {
+            //TODO: this is not working properly
+            if (failList.current.findIndex((fail) => (fail.monitorIdx === monitorsBeingApplied[i])) !== undefined) {
                 setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, overall: AttemptState.Failed } : mon)));
             } else {
                 setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, overall: AttemptState.Completed } : mon)));
             }
         }
         setShowPopup(false);
+        console.log(failList);
         console.log("Pop up closing");
     }
     async function applyEnable(focusedMonitorIdx: number, customMonitors: FrontendMonitor[]): Promise<Attempt> {
@@ -183,7 +185,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
         if (!(customMonitors[focusedMonitorIdx].outputs[0].rotation == initialMonitors.current[focusedMonitorIdx].outputs[0].rotation)) {
             console.log("rotation internal called");
             await invoke("set_rotation", {
-                xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
+                outputCrtc: customMonitors[focusedMonitorIdx].outputs[0].crtc,
                 rotation: customMonitors[focusedMonitorIdx].outputs[0].rotation
             }).then(async () => {
                 if (shouldPromptRedo && await promptUserToUndo()) {
@@ -212,34 +214,44 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
         console.log("position function called");
         console.log("initial X:", initialMonitors.current[focusedMonitorIdx].x, "| Y:", initialMonitors.current[focusedMonitorIdx].y);
         console.log("cust X:", customMonitors[focusedMonitorIdx].x, "| Y:", customMonitors[focusedMonitorIdx].y);
-        if (!(customMonitors[focusedMonitorIdx].x == initialMonitors.current[focusedMonitorIdx].x
-            && customMonitors[focusedMonitorIdx].y == initialMonitors.current[focusedMonitorIdx].y)) {
+        if (!(customMonitors[focusedMonitorIdx].x === initialMonitors.current[focusedMonitorIdx].x
+            && customMonitors[focusedMonitorIdx].y === initialMonitors.current[focusedMonitorIdx].y)) {
             console.log("positions internal called");
             if (normalizePositionsRef.current) {
                 normalizePositionsRef.current();
             }
+            console.log("initial x:" + initialMonitors.current[focusedMonitorIdx].x + ", initial y:" + initialMonitors.current[focusedMonitorIdx].y)
+            console.log("cust x:" + customMonitors[focusedMonitorIdx].x + ", cust y:" + customMonitors[focusedMonitorIdx].y)
             console.log("checks passed");
             await invoke("set_position", {
-                xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
+                outputCrtc: customMonitors[focusedMonitorIdx].outputs[0].crtc,
                 x: customMonitors[focusedMonitorIdx].x,
                 y: customMonitors[focusedMonitorIdx].y
             }).then(async () => {
+                console.log("initial2 x:" + initialMonitors.current[focusedMonitorIdx].x + ", initial y:" + initialMonitors.current[focusedMonitorIdx].y)
+                console.log("cust2 x:" + customMonitors[focusedMonitorIdx].x + ", cust y:" + customMonitors[focusedMonitorIdx].y)
                 if (shouldPromptRedo && await promptUserToUndo()) {
-                    resetFunctions.current.position!(focusedMonitorIdx);
+                    console.log("internals of redo func called")
+                    await resetFunctions.current.position!(focusedMonitorIdx);
+                    console.log("output:", customMonitors[focusedMonitorIdx].outputs[0].crtc, ",x:", customMonitors[focusedMonitorIdx].x, ",y:", customMonitors[focusedMonitorIdx].y)
                     await invoke("set_position", {
-                        xid: customMonitors[focusedMonitorIdx].outputs[0].xid,
-                        x: customMonitors[focusedMonitorIdx].x,
-                        y: customMonitors[focusedMonitorIdx].y
+                        outputCrtc: customMonitors[focusedMonitorIdx].outputs[0].crtc,
+                        x: initialMonitors.current[focusedMonitorIdx].x,
+                        y: initialMonitors.current[focusedMonitorIdx].y
                     })
                     output = { state: AttemptState.Undone, reason: "" };
                 } else {
                     initialMonitors.current[focusedMonitorIdx].x = customMonitors[focusedMonitorIdx].x;
                     initialMonitors.current[focusedMonitorIdx].y = customMonitors[focusedMonitorIdx].y;
+                    console.log("initial3 x:" + initialMonitors.current[focusedMonitorIdx].x + ", initial y:" + initialMonitors.current[focusedMonitorIdx].y)
+                    console.log("cust3 x:" + customMonitors[focusedMonitorIdx].x + ", cust y:" + customMonitors[focusedMonitorIdx].y)
                     output = { state: AttemptState.Completed, reason: "" };
                 }
             }).catch((reason) => {
                 output = { state: AttemptState.Failed, reason: reason };
             });
+            console.log("initial4 x:" + initialMonitors.current[focusedMonitorIdx].x + ", initial y:" + initialMonitors.current[focusedMonitorIdx].y)
+            console.log("cust4 x:" + customMonitors[focusedMonitorIdx].x + ", cust y:" + customMonitors[focusedMonitorIdx].y)
         }
         return output;
     }

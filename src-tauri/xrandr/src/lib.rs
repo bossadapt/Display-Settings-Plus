@@ -292,13 +292,9 @@ impl XHandle {
     }
 
     ///Custom specific position setter
-    pub fn set_position(&mut self, output: &Output, x: i32, y: i32) -> Result<(), XrandrError> {
-        let crtc_id = output
-            .crtc
-            .ok_or(XrandrError::OutputDisabled(output.name.clone()))?;
-
+    pub fn set_position(&mut self, output_crtc: u64, x: i32, y: i32) -> Result<(), XrandrError> {
         let res = ScreenResources::new(self)?;
-        let mut crtc = res.crtc(self, crtc_id)?;
+        let mut crtc = res.crtc(self, output_crtc)?;
         crtc.x = x;
         crtc.y = y;
         self.apply_new_crtcs(&mut [crtc])
@@ -320,16 +316,13 @@ impl XHandle {
     ///
     pub fn set_rotation(
         &mut self,
-        output: &Output,
+        output_crtc: u64,
         rotation: &Rotation,
     ) -> Result<(), XrandrError> {
-        let crtc_id = output
-            .crtc
-            .ok_or(XrandrError::OutputDisabled(output.name.clone()))?;
+        println!("Rotation Called");
 
         let res = ScreenResources::new(self)?;
-        let mut crtc = res.crtc(self, crtc_id)?;
-
+        let mut crtc = res.crtc(self, output_crtc)?;
         (crtc.width, crtc.height) = crtc.rotated_size(*rotation);
         crtc.rotation = *rotation;
 
@@ -374,6 +367,7 @@ impl XHandle {
         // Note that this should only be crtcs that were changed, but `changed`
         // contains the already altered crtc, so we have to use `old_crtcs`
         let mut old_crtcs = old_crtcs;
+
         for crtc in &mut old_crtcs {
             if !new_size.fits_crtc(crtc) {
                 crtc.set_disable();
@@ -490,6 +484,9 @@ pub enum XrandrError {
 
     #[error("No preferred modes found for output with xid {0}")]
     NoPreferredModes(xlib::XID),
+
+    #[error("Unable to fit the settings into the screen space")]
+    FitCrit,
 
     #[error("No mode found with xid {0}")]
     GetModeInfo(xlib::XID),

@@ -137,23 +137,20 @@ async fn set_enabled(xid: u64, enabled: bool) -> Result<(), XrandrError> {
     return Ok(());
 }
 #[tauri::command]
-async fn set_position(xid: u64, x: i32, y: i32) -> Result<(), XrandrError> {
+async fn set_position(output_crtc: u64, x: i32, y: i32) -> Result<(), XrandrError> {
     //setting up vars
     let mut xhandle = XHandle::open()?;
-    let res = ScreenResources::new(&mut xhandle)?;
-    let focused_output = res.output(&mut xhandle, xid)?;
     //making the change
-    xhandle.set_position(&focused_output, x, y)?;
+    println!("position set x:{}, y:{}", x, y);
+    xhandle.set_position(output_crtc, x, y)?;
     return Ok(());
 }
 #[tauri::command]
-async fn set_rotation(xid: u64, rotation: Rotation) -> Result<(), XrandrError> {
+async fn set_rotation(output_crtc: u64, rotation: Rotation) -> Result<(), XrandrError> {
     //setting up vars
     let mut xhandle = XHandle::open()?;
-    let res = ScreenResources::new(&mut xhandle)?;
-    let focused_output = res.output(&mut xhandle, xid)?;
     //making the change
-    xhandle.set_rotation(&focused_output, &rotation)?;
+    xhandle.set_rotation(output_crtc, &rotation)?;
     return Ok(());
 }
 #[tauri::command]

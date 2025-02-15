@@ -5,6 +5,7 @@ import { Application, Renderer } from "pixi.js";
 import Select from "react-select";
 import { invoke } from "@tauri-apps/api/core";
 import { ResetFunctions } from "./LoadedScreen";
+import { currentMonitor } from "@tauri-apps/api/window";
 interface FocusedMonitorSettingsProps {
     focusedMonitorIdx: number;
     monitorScale: number;
@@ -25,7 +26,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             console.log(customMonitors);
             rerenderMonitorsContainerRef.current(customMonitors);
         }
-    }, [customMonitors[focusedMonitorIdx].outputs[0].currentMode!.width]);
+    }, [customMonitors[focusedMonitorIdx].outputs[0].currentMode!.width, customMonitors[focusedMonitorIdx].outputs[0].rotation]);
     useEffect(() => {
         resetFunctions.current.enable = toggleEnable;
         resetFunctions.current.position = resetPosition;
@@ -152,8 +153,14 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     }
 
     function resetPosition(focusedMonitorIdx: number) {
+        console.log("POSITIONS RESET CALLED :", customMonitors[focusedMonitorIdx]);
         setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
             ? { ...curMon, x: initialMonitors.current[idx].x, y: initialMonitors.current[idx].y } : curMon)));
+        if (freeHandPositionCanvas.current) {
+            freeHandPositionCanvas.current.stage.children[focusedMonitorIdx].y = initialMonitors.current[focusedMonitorIdx].y / monitorScale + screenDragOffsetTotal.current.y;
+            freeHandPositionCanvas.current.stage.children[focusedMonitorIdx].x = initialMonitors.current[focusedMonitorIdx].x / monitorScale + screenDragOffsetTotal.current.x;
+        }
+        console.log("positions to :", initialMonitors.current[focusedMonitorIdx]);
     }
 
 
@@ -165,6 +172,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     { value: Rotation.Left, label: 'Left' },
     { value: Rotation.Inverted, label: 'Inverted' },
     { value: Rotation.Right, label: 'Right' }];
+    //TODO: properly handle rotations such as left entering the program
     function changeRotation(rotation: Rotation | undefined) {
         let prevRotation = customMonitors[focusedMonitorIdx].outputs[0].rotation;
 
@@ -212,6 +220,8 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     }
 
     function resetRotation(focusedMonitorIdx: number) {
+        console.log("Rotation RESET CALLED :", customMonitors[focusedMonitorIdx]);
+
         setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
             ? {
                 ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? {
@@ -241,12 +251,19 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     const modeFPSOptions = initialMonitors.current[focusedMonitorIdx].outputs[0].modes.filter((mode) => (mode.name === customMonitors[focusedMonitorIdx].outputs[0].currentMode!.name)).sort((a, b) => b.rate - a.rate).map((mode) => ({ value: mode, label: mode.rate.toFixed(5) }))
     function changeModePreset(newVal: Mode | undefined) {
         if (newVal) {
-            setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
-                ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: newVal } : out)) } : curMon)));
+            if (customMonitors[focusedMonitorIdx].outputs[0].rotation == Rotation.Inverted || customMonitors[focusedMonitorIdx].outputs[0].rotation == Rotation.Normal) {
+                setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
+                    ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: newVal } : out)) } : curMon)));
+            } else {
+                setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
+                    ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: { ...newVal, width: newVal.height, height: newVal.width } } : out)) } : curMon)));
+            }
 
         }
     }
     function resetModePreset(focusedMonitorIdx: number) {
+        console.log("RESET MODE PRESET :", customMonitors[focusedMonitorIdx]);
+
         setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
             ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode } : out)) } : curMon)));
     }
@@ -269,12 +286,13 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                 <h2>Position:</h2>
             </div>
             <div className="settingsEditorContainer">
-                <h2 style={{ marginTop: "auto", marginBottom: "auto" }}>X:</h2>
+                <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "-5px" }}>X:</h2>
                 <input disabled={!monitorEnabled} type="number" value={customMonitors[focusedMonitorIdx].x} onChange={(eve) => setPositionX(Number(eve.target.value))} />
-                <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "15px" }}>Y:</h2>
+                <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "10px" }}>Y:</h2>
                 <input disabled={!monitorEnabled} type="number" value={customMonitors[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
-                <button disabled={!monitorEnabled} onClick={() => { resetPosition(focusedMonitorIdx) }}>Reset</button>
             </div>
+            <button className="resetButton" disabled={!monitorEnabled} onClick={() => { resetPosition(focusedMonitorIdx) }}>Reset</button>
+
         </div>
         <div className="settingsContainer">
             <div className="settingsDescriptonContainer">
@@ -284,15 +302,16 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                 <Select isDisabled={!monitorEnabled} options={rotationOptions} onChange={(eve) => { changeRotation(eve?.value) }} value={rotationOptions.find((rot) =>
                     (rot.value === customMonitors[focusedMonitorIdx].outputs[0].rotation)
                 )} theme={customSelectTheme}></Select>
-                <button disabled={!monitorEnabled} onClick={() => { resetRotation(focusedMonitorIdx) }}>Reset</button>
             </div>
+            <button className="resetButton" disabled={!monitorEnabled} onClick={() => { resetRotation(focusedMonitorIdx) }}>Reset</button>
+
         </div>
         <div className="settingsContainer">
             <div className="settingsDescriptonContainer">
                 <h2>Mode:</h2>
             </div>
             <div className="settingsEditorContainer">
-                <h2 style={{ marginTop: "auto", marginBottom: "auto" }}>Ratio:</h2>
+                <h2 style={{ marginLeft: "-5px", marginTop: "auto", marginBottom: "auto" }}>Ratio:</h2>
                 <Select isDisabled={!monitorEnabled} options={modeRatioOptions} onChange={(eve) => {
                     if (eve) {
                         console.log("set eve.label to:", eve.label);
@@ -301,7 +320,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                 }} value={modeRatioOptions.find((option) => {
                     return option.value === customMonitors[focusedMonitorIdx].outputs[0].currentMode!.name;
                 })} theme={customSelectTheme}></Select>
-                <h2 style={{ marginTop: "auto", marginBottom: "auto" }}>Rate:</h2>
+                <h2 style={{ marginLeft: "10px", marginTop: "auto", marginBottom: "auto" }}>Rate:</h2>
                 <Select isDisabled={!monitorEnabled} options={modeFPSOptions} onChange={(eve) => changeModePreset(eve?.value)} value={modeFPSOptions.find((option) => {
                     // console.log("RAN Rate VALUE CODE:")
                     // console.log(option.value);
@@ -309,8 +328,9 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                     // console.log(option.value === customMonitors[focusedMonitorIdx].outputs[0].currentMode);
                     return option.value.xid === customMonitors[focusedMonitorIdx].outputs[0].currentMode?.xid;
                 })} theme={customSelectTheme}></Select>
-                <button disabled={!monitorEnabled} onClick={() => { resetModePreset(focusedMonitorIdx) }}>Reset</button>
             </div>
+            <button className="resetButton" disabled={!monitorEnabled} onClick={() => { resetModePreset(focusedMonitorIdx) }}>Reset</button>
+
         </div>
 
     </div>);

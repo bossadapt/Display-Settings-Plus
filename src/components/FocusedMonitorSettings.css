@@ -10,7 +10,7 @@
     margin-right: 2vw;
     margin-top: 2vh;
     margin-bottom: 2vh;
-    height: 20vh;
+    height: 15vh;
 }
 
 .settingsDescriptonContainer{
@@ -30,7 +30,14 @@
     display: row;
     margin: auto;
 }
+.resetButton{
+  height: 100%;
+  margin-right: 5px;
+  margin-top: auto;
+  margin-bottom: auto;
+  border-radius: 0 20px 20px 0;
 
+}
 /*https://codepen.io/savwiley/pen/xxVRqXX*/
 input[type="number"] {
     margin-left: 5px;

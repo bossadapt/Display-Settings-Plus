@@ -1,10 +1,10 @@
 import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, Renderer, BitmapText } from 'pixi.js';
 import { useState, useRef, Dispatch, SetStateAction, MutableRefObject } from 'react';
-import { FrontendMonitor, point } from '../globalValues';
+import { FrontendMonitor, point, Rotation } from '../globalValues';
 
 interface FreeHandPositionProps {
     monitorScale: number;
-    initialMonitors: FrontendMonitor[];
+    initialMonitors: MutableRefObject<FrontendMonitor[]>;
     customMonitors: FrontendMonitor[];
     app: MutableRefObject<Application<Renderer> | null>;
     screenDragOffsetTotal: MutableRefObject<point>;
@@ -111,6 +111,9 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         monitorContainer.x = monitor.x / monitorScale;
         monitorContainer.y = monitor.y / monitorScale;
         monitorContainer.label = monitor.name;
+        monitorContainer.cursor = 'pointer';
+        const monitorGraphic = new Graphics();
+        const monitorText = new BitmapText();
         // handles if the monitor is disabled(should not be seen and interactive)
         if (monitor.outputs[0].currentMode!.xid === 0) {
             monitorContainer.eventMode = 'none';
@@ -118,9 +121,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         } else {
             monitorContainer.eventMode = 'static';
         }
-
-        monitorContainer.cursor = 'pointer';
-        const monitorGraphic = new Graphics();
         //square
         console.log("Width:,", monitor.outputs[0].currentMode?.width, "Height:", monitor.outputs[0].currentMode?.height);
         monitorGraphic.rect(0, 0, monitor.outputs[0].currentMode!.width / monitorScale, monitor.outputs[0].currentMode!.height / monitorScale);
@@ -128,13 +128,31 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         monitorGraphic.fill();
         monitorGraphic.stroke({ width: 2, color: 'pink' });
         //text
-        const monitorText = new BitmapText();
         monitorText.text = monitor.name;
         monitorText.tint = 'hotpink';
+        switch (monitor.outputs[0].rotation) {
+            case Rotation.Inverted:
+                //Inverting
+                monitorText.x = (monitor.outputs[0].currentMode!.width / monitorScale);
+                monitorText.scale.x = -1;
+                break;
+            case Rotation.Right:
+                //Righting
+                monitorText.x = (monitor.outputs[0].currentMode!.width / monitorScale);
+                monitorText.rotation = Math.PI / 2
+                break;
+            case Rotation.Left:
+                //Lefting
+                monitorText.y = monitor.outputs[0].currentMode!.height / monitorScale;
+                monitorText.scale = -1;
+                monitorText.rotation = Math.PI / 2
+                break;
+            default:
+
+        }
         // Setup events for mouse + touch using the pointer events
         monitorContainer.on('mousedown', onDragStart, monitorGraphic);
         monitorContainer.addChild(monitorGraphic, monitorText);
-        // Add it to the stage
         monitorContainer.width = monitor.outputs[0].currentMode!.width / monitorScale;
         monitorContainer.height = monitor.outputs[0].currentMode!.height / monitorScale;
         return monitorContainer;
@@ -279,7 +297,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
                         return;
                     }
                     //snapping it
-                    //TODO: allow the user with diffrent sized screens to snap to either the bottom or the top of the thing they are holding(test with inverted screen)
+                    //TODO: allow snapping of bottom anchors ontop of the top right to rop left, also add snapping for same as
                     if (Math.abs(difX) > Math.abs(difY) || (!validTop && !validBottom)) {
                         if ((difX < 0 && validLeft) || !validRight) {
                             //left
@@ -323,11 +341,11 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
     function resetMonitorsPositions() {
         if (app.current) {
             app.current!.stage.children.forEach(((mon, idx) => {
-                mon.x = initialMonitors[idx].x / monitorScale;
-                mon.y = initialMonitors[idx].y / monitorScale;
+                mon.x = initialMonitors.current[idx].x / monitorScale;
+                mon.y = initialMonitors.current[idx].y / monitorScale;
             }));
         }
-        setMonitors((mons) => mons.map((curMon, idx) => ({ ...curMon, x: initialMonitors[idx].x, y: initialMonitors[idx].y })));
+        setMonitors((mons) => mons.map((curMon, idx) => ({ ...curMon, x: initialMonitors.current[idx].x, y: initialMonitors.current[idx].y })));
         screenDragOffsetTotal.current.x = 0;
         screenDragOffsetTotal.current.y = 0;
     }
@@ -342,6 +360,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
     ///Used to make it so the farthest left monitor starts at zero x and and lowest monitor to start at zero(adjusting all other monitors accordingly)
     function normalizePositions() {
         if (app.current) {
+            //console.log("initial XX:", initialMonitors.current[focusedMonitorIdx].x, "| YY:", initialMonitors.current[focusedMonitorIdx].y);
             let minOffsetY = Number.MAX_VALUE;
             let minOffsetX = Number.MAX_VALUE;
             //find the smallest offsets
@@ -368,6 +387,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
             setMonitors(newMonitors);
             screenDragOffsetTotal.current.x = 0;
             screenDragOffsetTotal.current.y = 0;
+            //console.log("initial XX:", initialMonitors.current[focusedMonitorIdx].x, "| YY:", initialMonitors.current[focusedMonitorIdx].y);
+
         }
     }
     return (
