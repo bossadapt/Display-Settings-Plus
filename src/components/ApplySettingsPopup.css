@@ -68,10 +68,38 @@ height: 410px;
   margin-left: auto;
 
 }
-.undoButton{
-  color:hotpink;
+.popupButtonContainer{
+  display: flex;
+  flex-direction: row;
   width: 100%;
+}
+.errorTable{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: 340px;
+  overflow-y: scroll;
+}
+.errorTable > tr{
+  display: flex;
+  flex-direction: row;
+}
+.errorTable > tr > th,td{
+  display: flex;
+  flex-direction: row;
+  margin-left: auto;
+  margin-right: auto;
+}
+.popupButton{
+  color:hotpink;
+  width: 50%;
   height: 10px;
+}
+.finishButton{
+  width: 100%;
+  margin-top: auto;
+  height: 10px;
+  border-radius: 0px 0px 10px 10px 
 }
   #inProgress{
     color: yellow;
@@ -79,9 +107,7 @@ height: 410px;
   #waiting{
     color: grey;
   }
-  #trialPeriod{
-    color: orange;
-  }
+
   #completed{
     color: Green
   }

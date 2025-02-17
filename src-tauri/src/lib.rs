@@ -161,20 +161,6 @@ async fn set_primary(xid: u64) -> Result<(), XrandrError> {
     return Ok(());
 }
 #[tauri::command]
-async fn set_enabled(xid: u64, enabled: bool) -> Result<(), XrandrError> {
-    //setting up vars
-    let mut xhandle = XHandle::open()?;
-    let res = ScreenResources::new(&mut xhandle)?;
-    let focused_output = res.output(&mut xhandle, xid)?;
-    //making the change
-    if enabled {
-        xhandle.enable(&focused_output)?
-    } else {
-        xhandle.disable(&focused_output)?
-    }
-    return Ok(());
-}
-#[tauri::command]
 async fn set_position(output_crtc: u64, x: i32, y: i32) -> Result<(), XrandrError> {
     //setting up vars
     let mut xhandle = XHandle::open()?;
@@ -191,26 +177,33 @@ async fn set_rotation(output_crtc: u64, rotation: Rotation) -> Result<(), Xrandr
     xhandle.set_rotation(output_crtc, &rotation)?;
     return Ok(());
 }
+///returns crtc after enabling monitor
 #[tauri::command]
-async fn set_enable(xid: u64, enabled: bool) -> Result<(), XrandrError> {
+async fn set_enabled(xid: u64, enabled: bool) -> Result<u64, XrandrError> {
     //setting up vars
     let mut xhandle = XHandle::open()?;
     let res = ScreenResources::new(&mut xhandle)?;
     let focused_output = res.output(&mut xhandle, xid)?;
     //making the change
+    let mut new_crtc = 0;
     if enabled {
-        xhandle.enable(&focused_output)?;
+        new_crtc = xhandle.enable(&focused_output)?;
     } else {
         xhandle.disable(&focused_output)?;
     }
-    return Ok(());
+    return Ok(new_crtc);
 }
 #[tauri::command]
-async fn set_mode(output_crtc: u64, mode: Mode) -> Result<(), XrandrError> {
+async fn set_mode(
+    output_crtc: u64,
+    mode_xid: u64,
+    mode_height: u32,
+    mode_width: u32,
+) -> Result<(), XrandrError> {
     //setting up vars
     let mut xhandle = XHandle::open()?;
     //making the change
-    xhandle.set_mode(output_crtc, mode.xid, mode.height, mode.width)?;
+    xhandle.set_mode(output_crtc, mode_xid, mode_height, mode_width)?;
     return Ok(());
 }
 #[tauri::command]
@@ -279,7 +272,6 @@ pub fn run() {
             set_position,
             set_rotation,
             set_mode,
-            set_enable,
             get_presets,
             overwrite_preset
         ])

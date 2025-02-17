@@ -147,9 +147,9 @@ impl XHandle {
     /// xhandle.enable(dp_1)?;
     /// ```
     ///
-    pub fn enable(&mut self, output: &Output) -> Result<(), XrandrError> {
+    pub fn enable(&mut self, output: &Output) -> Result<u64, XrandrError> {
         if output.current_mode.is_some() {
-            return Ok(());
+            return Ok(output.crtc.unwrap());
         }
 
         let target_mode = output
@@ -159,13 +159,12 @@ impl XHandle {
 
         let mut crtc = self.find_available_crtc(output)?;
         let mode = ScreenResources::new(self)?.mode(*target_mode)?;
-
         crtc.mode = mode.xid;
         crtc.width = mode.width;
         crtc.height = mode.height;
         crtc.outputs = vec![output.xid];
-
-        self.apply_new_crtcs(&mut [crtc])
+        self.apply_new_crtcs(&mut [crtc.clone()])?;
+        Ok(crtc.xid)
     }
 
     /// Disable the given output

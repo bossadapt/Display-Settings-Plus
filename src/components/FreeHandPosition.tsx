@@ -3,24 +3,24 @@ import { useState, useRef, Dispatch, SetStateAction, MutableRefObject, useEffect
 import { FrontendMonitor, point, Rotation } from '../globalValues';
 
 interface FreeHandPositionProps {
-    monitorScale: number;
     initialMonitors: MutableRefObject<FrontendMonitor[]>;
     customMonitors: FrontendMonitor[];
-    app: MutableRefObject<Application<Renderer> | null>;
-    screenDragOffsetTotal: MutableRefObject<point>;
     setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
     rerenderMonitorsContainerRef: MutableRefObject<Function | null>;
     normalizePositionsRef: MutableRefObject<((customMonitors: FrontendMonitor[]) => void) | null>;
 }
-export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOffsetTotal, monitorScale, app, initialMonitors, customMonitors, setMonitors: setCustMonitors, rerenderMonitorsContainerRef, normalizePositionsRef }) => {
+export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonitors, customMonitors, setMonitors: setCustMonitors, rerenderMonitorsContainerRef, normalizePositionsRef }) => {
     // within 10 px of another mon will cause a snap
     const snapPixelLength = 50;
     const dragTarget = useRef<null | Container<ContainerChild>>(null)
     const screenDragActive = useRef(false);
+    const screenDragOffsetTotal = useRef<point>({ x: 0, y: 0 });
+    const monitorScale = 10;
     const initialDragX = useRef(0);
     const initialDragY = useRef(0);
     const previousDragOffsetX = useRef(0);
     const previousDragOffsetY = useRef(0);
+    const app = useRef<Application | null>(null);
     //needs to be use state to update button color
     const [snapEnabled, setSnapEnabled] = useState(true);
     const snapEnabledRef = useRef(true);
@@ -85,7 +85,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         setCustMonitors((mons) =>
             mons.map((curMon) =>
                 curMon.name === monitorName
-                    ? { ...curMon, y: Math.round(y), x: Math.round(x) }
+                    ? { ...curMon, y: Math.trunc(Math.ceil(y)), x: Math.trunc(Math.ceil(x)) }
                     : curMon
             )
         );
@@ -108,14 +108,16 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         // Container
         const monitorContainer = new Container();
         monitorContainer.isRenderGroup = true;
-        monitorContainer.x = monitor.x / monitorScale;
-        monitorContainer.y = monitor.y / monitorScale;
+        monitorContainer.x = monitor.x / monitorScale + screenDragOffsetTotal.current.x;
+        monitorContainer.y = monitor.y / monitorScale + screenDragOffsetTotal.current.y;
         monitorContainer.label = monitor.name;
         monitorContainer.cursor = 'pointer';
         const monitorGraphic = new Graphics();
         const monitorText = new BitmapText();
         // handles if the monitor is disabled(should not be seen and interactive)
         if (monitor.outputs[0].currentMode!.xid === 0) {
+            console.log("DISABLED ON FREEHANDTSX")
+            console.log(monitor);
             monitorContainer.eventMode = 'none';
             monitorContainer.alpha = 0;
         } else {
@@ -173,6 +175,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         app.current!.stage.on('pointermove', onScreenMove);
     }
     function onScreenMove(eve: FederatedPointerEvent) {
+        console.log("screen drag")
         if (screenDragActive.current) {
             let difX = eve.globalX - previousDragOffsetX.current;
             let difY = eve.globalY - previousDragOffsetY.current;
