@@ -31,7 +31,6 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
   const applyChangesRef = useRef<Function | null>(null);
   const normalizePositionsRef = useRef<((customMonitors: FrontendMonitor[]) => void) | null>(null);
   const rerenderMonitorsContainerRef = useRef<Function | null>(null);
-  //TODO: implement presets system
   const presetsOptions = presets.current.map((_preset, idx) => ({ value: idx, label: "Preset " + idx }));
   //Collection handler
   async function applyAll() {
@@ -55,6 +54,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
   function resetPrimryMonitor() {
     setCustMonitors((mons) => (mons.map((mon, idx) => ({ ...mon, isPrimary: initialMonitors.current[idx].isPrimary }))));
   }
+  //TODO: maybe move to popup so that it can be shown in popup applyall
   async function applyPrimaryMonitor() {
     let newPrimaryIndex = customMonitors.findIndex((mon) => mon.isPrimary);
     let OldPrimaryIndex = initialMonitors.current.findIndex((mon) => mon.isPrimary);

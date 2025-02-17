@@ -227,15 +227,18 @@ impl XHandle {
     /// xhandle.set_mode(dp_1, mode)?;
     /// ```
     ///
-    pub fn set_mode(&mut self, output: &Output, mode: &Mode) -> Result<(), XrandrError> {
-        let crtc_id = output
-            .crtc
-            .ok_or(XrandrError::OutputDisabled(output.name.clone()))?;
-        let mut crtc = ScreenResources::new(self)?.crtc(self, crtc_id)?;
-        crtc.mode = mode.xid;
+    pub fn set_mode(
+        &mut self,
+        output_crtc: XId,
+        mode_xid: XId,
+        height: u32,
+        width: u32,
+    ) -> Result<(), XrandrError> {
         //Created a pull that fixed this method at https://github.com/dzfranklin/xrandr-rs/pull/19
-        crtc.height = mode.height;
-        crtc.width = mode.width;
+        let mut crtc = ScreenResources::new(self)?.crtc(self, output_crtc)?;
+        crtc.mode = mode_xid;
+        crtc.height = height;
+        crtc.width = width;
         //
         self.apply_new_crtcs(&mut [crtc])
     }

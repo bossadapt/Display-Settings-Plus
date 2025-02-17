@@ -20,10 +20,6 @@ struct FrontendMonitor {
     width_px: i32,
     #[serde(rename = "heightPx")]
     height_px: i32,
-    #[serde(rename = "widthMm")]
-    width_mm: i32,
-    #[serde(rename = "heightMm")]
-    height_mm: i32,
     /// An Output describes an actual physical monitor or display. A [`Monitor`]
     /// can have more than one output.
     outputs: Vec<FrontendOutput>,
@@ -39,10 +35,6 @@ struct FrontendOutput {
     //derived from crtc
     rotation: Rotation,
     name: String,
-    #[serde(rename = "mmWidth")]
-    mm_width: u64,
-    #[serde(rename = "mmHeight")]
-    mm_height: u64,
     connected: bool,
     #[serde(rename = "subpixelOrder")]
     subpixel_order: u16,
@@ -61,7 +53,7 @@ async fn get_monitors() -> Vec<FrontendMonitor> {
     let res = ScreenResources::new(&mut xhandle).unwrap();
     let monitors = xhandle.monitors().unwrap();
     //cant convert to intos due to dependencies on res and xhandle
-    let output = monitors
+    let mut output: Vec<FrontendMonitor> = monitors
         .iter()
         .map(|mon| FrontendMonitor {
             name: mon.name.clone(),
@@ -71,8 +63,6 @@ async fn get_monitors() -> Vec<FrontendMonitor> {
             y: mon.y,
             width_px: mon.width_px,
             height_px: mon.height_px,
-            width_mm: mon.width_mm,
-            height_mm: mon.height_mm,
             outputs: mon
                 .outputs
                 .iter()
@@ -87,8 +77,6 @@ async fn get_monitors() -> Vec<FrontendMonitor> {
                         .rotation
                         .into(),
                     name: out.name.clone(),
-                    mm_width: out.mm_width,
-                    mm_height: out.mm_height,
                     connected: out.connected,
                     subpixel_order: out.subpixel_order,
                     crtcs: out.crtcs.clone(),
@@ -115,8 +103,54 @@ async fn get_monitors() -> Vec<FrontendMonitor> {
     // let test = ScreenResources::mode(xhandle);
     // println!("{:#?}", test.join("\n NEW \n"));
     //println!("{:#?}", monitors[0].outputs[0].properties);
-    //println!("MONITORS: \n {:#?}", output);
-
+    //
+    let disabled_monitors: Vec<FrontendMonitor> = xhandle
+        .all_outputs()
+        .unwrap()
+        .iter()
+        .filter(|&out| out.connected && out.current_mode == None)
+        .map(|out| {
+            let preferred_mode = res.mode(out.preferred_modes[0]).unwrap();
+            FrontendMonitor {
+                name: out.name.clone(),
+                is_primary: false,
+                is_automatic: true,
+                x: 0,
+                y: 0,
+                width_px: preferred_mode.width as i32,
+                height_px: preferred_mode.height as i32,
+                outputs: vec![FrontendOutput {
+                    xid: out.xid,
+                    timestamp: out.timestamp,
+                    is_primary: out.is_primary,
+                    crtc: out.crtc,
+                    rotation: Rotation::Normal,
+                    name: out.name.clone(),
+                    connected: out.connected,
+                    subpixel_order: out.subpixel_order,
+                    crtcs: out.crtcs.clone(),
+                    clones: out.clones.clone(),
+                    modes: out
+                        .modes
+                        .iter()
+                        .map(|mode_id| res.mode(*mode_id).unwrap())
+                        .collect(),
+                    preferred_modes: out
+                        .preferred_modes
+                        .iter()
+                        .map(|mode_id| res.mode(*mode_id).unwrap())
+                        .collect(),
+                    current_mode: Some(Mode {
+                        xid: 0,
+                        ..preferred_mode
+                    }),
+                }],
+            }
+        })
+        .collect::<Vec<FrontendMonitor>>();
+    for monitor in disabled_monitors {
+        output.push(monitor);
+    }
     output
 }
 
@@ -172,13 +206,11 @@ async fn set_enable(xid: u64, enabled: bool) -> Result<(), XrandrError> {
     return Ok(());
 }
 #[tauri::command]
-async fn set_mode(output_xid: u64, mode: Mode) -> Result<(), XrandrError> {
+async fn set_mode(output_crtc: u64, mode: Mode) -> Result<(), XrandrError> {
     //setting up vars
     let mut xhandle = XHandle::open()?;
-    let res = ScreenResources::new(&mut xhandle)?;
-    let focused_output = res.output(&mut xhandle, output_xid)?;
     //making the change
-    xhandle.set_mode(&focused_output, &mode)?;
+    xhandle.set_mode(output_crtc, mode.xid, mode.height, mode.width)?;
     return Ok(());
 }
 #[tauri::command]

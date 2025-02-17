@@ -12,19 +12,22 @@ interface FocusedMonitorSettingsProps {
     customMonitors: FrontendMonitor[];
     initialMonitors: MutableRefObject<FrontendMonitor[]>;
     setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
-    rerenderMonitorsContainerRef: MutableRefObject<Function | null>;
+    rerenderMonitorsContainerRef: MutableRefObject<((newMonitors: FrontendMonitor[]) => void) | null>;
     resetFunctions: MutableRefObject<ResetFunctions>;
 }
 export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     { monitorScale, screenDragOffsetTotal, freeHandPositionCanvas, focusedMonitorIdx, customMonitors, initialMonitors, setMonitors, rerenderMonitorsContainerRef, resetFunctions }) => {
 
     //if there are any size changes, then the monitors need to rerendered without affecting the order integrity or stretching
+    //MANUAL ATTEMPT
     useEffect(() => {
+        console.log('rerender external called');
         if (rerenderMonitorsContainerRef.current) {
+            console.log('rerender internal');
             console.log(customMonitors);
             rerenderMonitorsContainerRef.current(customMonitors);
         }
-    }, [customMonitors[focusedMonitorIdx].outputs[0].currentMode!.width, customMonitors[focusedMonitorIdx].outputs[0].rotation]);
+    }, [customMonitors]);
     useEffect(() => {
         resetFunctions.current.enable = toggleEnable;
         resetFunctions.current.position = resetPosition;
@@ -33,7 +36,6 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     }, [toggleEnable, resetPosition, resetRotation, resetModePreset]);
     //Enable
     ///used to disable the rest of the options:
-
     const monitorEnabled = customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid !== 0;
     function toggleEnable(focusedMonitorIdx: number) {
         console.log("button pressed");
@@ -47,8 +49,8 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                             ...mon,
                             x: initialMonitors.current[focusedMonitorIdx].x,
                             y: initialMonitors.current[focusedMonitorIdx].y,
-                            outputs: mon.outputs.map((out, idx) =>
-                                idx === 0
+                            outputs: mon.outputs.map((out, outIdx) =>
+                                outIdx === 0
                                     ? {
                                         ...out,
                                         rotation: initialMonitors.current[focusedMonitorIdx].outputs[0].rotation,
@@ -94,8 +96,8 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                             ...mon,
                             x: 0,
                             y: 0,
-                            outputs: mon.outputs.map((out, idx) =>
-                                idx === 0
+                            outputs: mon.outputs.map((out, outIdx) =>
+                                outIdx === 0
                                     ? {
                                         ...out,
                                         rotation: Rotation.Normal,
@@ -170,65 +172,29 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     { value: Rotation.Left, label: 'Left' },
     { value: Rotation.Inverted, label: 'Inverted' },
     { value: Rotation.Right, label: 'Right' }];
-    //TODO: properly handle rotations such as left entering the program
-    function changeRotation(rotation: Rotation | undefined) {
+    function changeRotation(newRotation: Rotation | undefined) {
         let prevRotation = customMonitors[focusedMonitorIdx].outputs[0].rotation;
 
         //correlates to sizes
-        if (rotation) {
-            if ((rotation == Rotation.Normal || rotation === Rotation.Inverted) && (prevRotation !== Rotation.Normal && prevRotation !== Rotation.Inverted)
-            ) {
-                console.log("width and height changed to original state");
-                setMonitors((mons) =>
-                    mons.map((curMon, idx) =>
-                    (idx === focusedMonitorIdx
-                        ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, rotation: rotation, currentMode: { ...out.currentMode!, width: curMon.widthPx, height: curMon.heightPx } } : out)) }
-                        : curMon)
-                    )
-                );
-                // rerenderMonitorsContainerRef.current!();
-            } else if ((rotation == Rotation.Left || rotation === Rotation.Right) && (prevRotation !== Rotation.Left && prevRotation !== Rotation.Right)
-
-            ) {
-                console.log("width and height changed to a sideways state");
-                setMonitors((mons) =>
-                    mons.map((curMon, idx) =>
-                    (idx === focusedMonitorIdx
-                        ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, rotation: rotation, currentMode: { ...out.currentMode!, width: curMon.heightPx, height: curMon.widthPx } } : out)) }
-                        : curMon)
-                    )
-                );
-                console.log("ideal new Width:,", customMonitors[focusedMonitorIdx].heightPx, "new Height:", customMonitors[focusedMonitorIdx].widthPx);
-                // rerenderMonitorsContainerRef.current!();
-            } else if (rotation != prevRotation) {
-                //handling changing the state for things that dont need to flip 
-                setMonitors((mons) =>
-                    mons.map((curMon, idx) =>
-                    (idx === focusedMonitorIdx
-                        ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, rotation: rotation } : out)) }
-                        : curMon)
-                    )
-                );
-            }
-            console.log("new Width:,", customMonitors[focusedMonitorIdx].outputs[0].currentMode!.width, "new Height:", customMonitors[focusedMonitorIdx].outputs[0].currentMode!.height);
-
-
-
+        if (newRotation && newRotation !== prevRotation) {
+            setMonitors((mons) =>
+                mons.map((curMon, idx) =>
+                (idx === focusedMonitorIdx
+                    ? { ...curMon, outputs: curMon.outputs.map((out, outIdx) => (outIdx === 0 ? { ...out, rotation: newRotation } : out)) }
+                    : curMon)
+                )
+            );
+            if (rerenderMonitorsContainerRef.current)
+                rerenderMonitorsContainerRef.current(customMonitors)
         }
     }
 
     function resetRotation(focusedMonitorIdx: number) {
         console.log("Rotation RESET CALLED :", customMonitors[focusedMonitorIdx]);
-
         setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
             ? {
-                ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? {
-                    ...out, rotation: initialMonitors.current[idx].outputs[0].rotation,
-                    currentMode: {
-                        ...out.currentMode!,
-                        height: initialMonitors.current[idx].outputs[0].currentMode!.height,
-                        width: initialMonitors.current[idx].outputs[0].currentMode!.width
-                    }
+                ...curMon, outputs: curMon.outputs.map((out, outIdx) => (outIdx === 0 ? {
+                    ...out, rotation: initialMonitors.current[focusedMonitorIdx].outputs[0].rotation,
                 } : out))
             } : curMon)));
     }
@@ -240,7 +206,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     //MODE
     function setFocusedModeRatio(newRatio: String) {
         setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
-            ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, name: newRatio.toString() } : out)) } : curMon)));
+            ? { ...curMon, outputs: curMon.outputs.map((out, outIdx) => (outIdx === 0 ? { ...out, name: newRatio.toString() } : out)) } : curMon)));
         let futureAvailableModes = initialMonitors.current[focusedMonitorIdx].outputs[0].modes.filter((mode) => (mode.name === newRatio)).sort((a, b) => b.rate - a.rate);
         changeModePreset(futureAvailableModes[0]);
 
@@ -251,29 +217,24 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
         .sort((a, b) => b.rate - a.rate)
         .map((mode) => ({ value: mode, label: mode.rate.toFixed(5) }))
     function changeModePreset(newVal: Mode | undefined) {
-        if (newVal) {
-            if (customMonitors[focusedMonitorIdx].outputs[0].rotation == Rotation.Inverted || customMonitors[focusedMonitorIdx].outputs[0].rotation == Rotation.Normal) {
-                setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
-                    ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: newVal } : out)) } : curMon)));
-            } else {
-                setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
-                    ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: { ...newVal, width: newVal.height, height: newVal.width } } : out)) } : curMon)));
-            }
-
+        if (newVal && newVal !== customMonitors[focusedMonitorIdx].outputs[0].currentMode) {
+            setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
+                ? { ...curMon, outputs: curMon.outputs.map((out, outIdx) => (outIdx === 0 ? { ...out, currentMode: newVal } : out)) } : curMon)));
         }
     }
     function resetModePreset(focusedMonitorIdx: number) {
         console.log("RESET MODE PRESET :", customMonitors[focusedMonitorIdx]);
 
         setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
-            ? { ...curMon, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode } : out)) } : curMon)));
+            ? { ...curMon, outputs: curMon.outputs.map((out, outIdx) => (outIdx === 0 ? { ...out, currentMode: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode } : out)) } : curMon)));
+        if (rerenderMonitorsContainerRef.current)
+            rerenderMonitorsContainerRef.current(customMonitors)
     }
 
     function resetAllFocused() {
         setMonitors((custMons) => (custMons.map((custMon, idx) => (idx === focusedMonitorIdx
             ? { ...initialMonitors.current[focusedMonitorIdx] } : custMon))));
-        if (rerenderMonitorsContainerRef.current)
-            rerenderMonitorsContainerRef.current()
+
     }
     return (<div>
         <div className="settingsContainer">

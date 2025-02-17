@@ -122,8 +122,16 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
             monitorContainer.eventMode = 'static';
         }
         //square
-        console.log("Width:,", monitor.outputs[0].currentMode?.width, "Height:", monitor.outputs[0].currentMode?.height);
-        monitorGraphic.rect(0, 0, monitor.outputs[0].currentMode!.width / monitorScale, monitor.outputs[0].currentMode!.height / monitorScale);
+        let monitorWidth = monitor.outputs[0].currentMode!.width;
+        let monitorHeight = monitor.outputs[0].currentMode!.height;
+        //handle monitors being sideways
+        if (monitor.outputs[0].rotation === Rotation.Left || monitor.outputs[0].rotation === Rotation.Right) {
+            monitorWidth = monitor.outputs[0].currentMode!.height;
+            monitorHeight = monitor.outputs[0].currentMode!.width;
+        }
+        console.log("Width:,", monitorWidth, "Height:", monitorHeight);
+
+        monitorGraphic.rect(0, 0, monitorWidth / monitorScale, monitorHeight / monitorScale);
         monitorGraphic.fillStyle = 'black';
         monitorGraphic.fill();
         monitorGraphic.stroke({ width: 2, color: 'pink' });
@@ -133,17 +141,18 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         switch (monitor.outputs[0].rotation) {
             case Rotation.Inverted:
                 //Inverting
-                monitorText.x = (monitor.outputs[0].currentMode!.width / monitorScale);
-                monitorText.scale.x = -1;
+                monitorText.x = (monitorWidth / monitorScale);
+                monitorText.y = (monitorHeight / monitorScale);
+                monitorText.scale = -1;
                 break;
             case Rotation.Right:
                 //Righting
-                monitorText.x = (monitor.outputs[0].currentMode!.width / monitorScale);
+                monitorText.x = (monitorWidth / monitorScale);
                 monitorText.rotation = Math.PI / 2
                 break;
             case Rotation.Left:
                 //Lefting
-                monitorText.y = monitor.outputs[0].currentMode!.height / monitorScale;
+                monitorText.y = monitorHeight / monitorScale;
                 monitorText.scale = -1;
                 monitorText.rotation = Math.PI / 2
                 break;
@@ -153,8 +162,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ screenDragOf
         // Setup events for mouse + touch using the pointer events
         monitorContainer.on('mousedown', onDragStart, monitorGraphic);
         monitorContainer.addChild(monitorGraphic, monitorText);
-        monitorContainer.width = monitor.outputs[0].currentMode!.width / monitorScale;
-        monitorContainer.height = monitor.outputs[0].currentMode!.height / monitorScale;
+        monitorContainer.width = monitorWidth / monitorScale;
+        monitorContainer.height = monitorHeight / monitorScale;
         return monitorContainer;
     }
     function onScreenDragStart(eve: FederatedPointerEvent) {

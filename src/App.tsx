@@ -35,7 +35,7 @@ function App() {
     initialMonitorsInfo.current = [];
     setCustomMonitorsInfo([]);
     invoke<FrontendMonitor[]>("get_monitors", {}).then((res) => {
-      res = handleRotations(res);
+      //res = handleRotations(res);
       initialMonitorsInfo.current = [...res];
       setCustomMonitorsInfo(res);
       console.log(res);
@@ -49,14 +49,14 @@ function App() {
       console.error(err);
     });
   }
-  function handleRotations(input: FrontendMonitor[]): FrontendMonitor[] {
-    //initial monitors true rotation is stored in the monitor instead of the mode but I'm undoing that to handle state slightly more cleanly
-    return input.map((curMon) =>
-    (curMon.outputs[0].rotation === Rotation.Left || curMon.outputs[0].rotation === Rotation.Right
-      ? { ...curMon, widthMm: curMon.heightMm, heightMm: curMon.widthMm, widthPx: curMon.heightPx, heightPx: curMon.widthPx, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: { ...out.currentMode!, width: curMon.outputs[0].currentMode!.height, height: curMon.outputs[0].currentMode!.width } } : out)) }
-      : curMon)
-    );
-  }
+  // function handleRotations(input: FrontendMonitor[]): FrontendMonitor[] {
+  //   //initial monitors true rotation is stored in the monitor instead of the mode but I'm undoing that to handle state slightly more cleanly
+  //   return input.map((curMon) =>
+  //   (curMon.outputs[0].rotation === Rotation.Left || curMon.outputs[0].rotation === Rotation.Right
+  //     ? { ...curMon, widthMm: curMon.heightMm, heightMm: curMon.widthMm, widthPx: curMon.heightPx, heightPx: curMon.widthPx, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: { ...out.currentMode!, width: curMon.outputs[0].currentMode!.height, height: curMon.outputs[0].currentMode!.width } } : out)) }
+  //     : curMon)
+  //   );
+  // }
   return (
     <div>{customMonitorsInfo.length != 0 ? <LoadedScreen presets={presets} monitorRefreshRef={refreshMonitorsRef} customMonitors={customMonitorsInfo} initialMonitors={initialMonitorsInfo} setCustMonitors={setCustomMonitorsInfo} /> : <LoadingScreen />}</div>
   );

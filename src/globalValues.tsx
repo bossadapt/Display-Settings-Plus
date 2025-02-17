@@ -54,8 +54,6 @@ export interface FrontendMonitor {
     y: number;
     widthPx: number;
     heightPx: number;
-    widthMm: number;
-    heightMm: number;
     outputs: FrontendOutput[];
 }
 
@@ -66,8 +64,6 @@ export interface FrontendOutput {
     crtc?: number;
     rotation: Rotation;
     name: string;
-    mmWidth: number;
-    mmHeight: number;
     connected: boolean;
     subpixelOrder: number;
     crtcs: number[];
