@@ -107,7 +107,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
         <Select onChange={(eve) => { eve ? setFocusedPreset(eve.value) : {} }} options={presetsOptions} value={presetsOptions[focusedPresetIdx]} theme={customSelectTheme}></Select>
         <button style={{ color: "hotpink" }} onClick={overwriteFocusedPreset}>Overwrite Preset</button>
         <button style={{ color: "hotpink", marginLeft: "auto" }} onClick={resetAll}>Reset All</button>
-        <button style={{ color: "hotpink" }} onClick={() => { monitorRefreshRef.current() }}>Refresh All</button>
+        <button style={{ color: "hotpink" }} onClick={() => { monitorRefreshRef.current() }}>Resync</button>
         <button style={{ color: "hotpink" }} onClick={applyAll}>Apply All Changes</button>
       </div>
       <hr style={{ marginTop: "10px", marginBottom: "10px" }} />

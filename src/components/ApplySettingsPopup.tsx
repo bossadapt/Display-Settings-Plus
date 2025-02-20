@@ -54,13 +54,13 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
     const [nextButtonText, setNextButtonText] = useState("...");
     const [buttonsEnabled, setButtonsEnabled] = useState(false);
     const [onErrorScreen, setOnErrorScreen] = useState(false);
+    const [monitorsBeingChangedState, setMonitorsBeingChangedState] = useState<number[]>([]);
     const undoButtonPressed = useRef(false);
     const nextButtonPressed = useRef(false);
 
     //TODO: check how enable interacts with everything
     //TODO: possibly disable the scrolling happening in the background
     async function applyAllChanges(customMonitors: FrontendMonitor[], monitorsBeingApplied: number[]) {
-        setShowPopup(true);
         setNextButtonText("...");
         setOnErrorScreen(false);
         failList.current = [];
@@ -68,15 +68,22 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
         setMonitorStates(new Array(initialMonitors.current.length).fill(
             { ...defaultMonitorApplyState }
         ));
+
         instancedMonitors.current = [...customMonitors];
+        if (normalizePositionsRef.current) {
+            instancedMonitors.current = normalizePositionsRef.current!(instancedMonitors.current);
+        }
+        monitorsBeingApplied.sort((m1, m2) => instancedMonitors.current[m1].x - instancedMonitors.current[m2].x);
+        setMonitorsBeingChangedState(monitorsBeingApplied);
+        setShowPopup(true);
         for (let i = 0; i < monitorsBeingApplied.length; i++) {
             //set new monitor to in progress along with enable
-            setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, overall: AttemptState.InProgress, enabled: AttemptState.InProgress } : mon)));
+            setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, overall: AttemptState.InProgress, enabled: AttemptState.InProgress } : mon)));
             //enable
-            console.log("enabled called on monitor#", i);
-            console.log([...instancedMonitors.current])
+            // console.log("enabled called on monitor#", i);
+            // console.log([...instancedMonitors.current])
             let enableAttempt = await applyEnable(monitorsBeingApplied[i], instancedMonitors);
-            setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, enabled: enableAttempt.state } : mon)));
+            setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, enabled: enableAttempt.state } : mon)));
             if (enableAttempt.state === AttemptState.Failed) {
                 failList.current.push({
                     monitorIdx: monitorsBeingApplied[i],
@@ -86,12 +93,12 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
             }
             //disabled or had to force an undo change(happens due to state not wanting to change due to the values === the initial without a change)
             if (!instancedMonitors.current[monitorsBeingApplied[i]].outputs[0].enabled || enableAttempt.state !== AttemptState.Undone) {
-                console.log("position called on monitor#", i);
-                console.log([...instancedMonitors.current])
+                // console.log("position called on monitor#", i);
+                // console.log([...instancedMonitors.current])
                 //position
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, position: AttemptState.InProgress } : mon)));
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, position: AttemptState.InProgress } : mon)));
                 let positionAttempt = await applyPosition(monitorsBeingApplied[i], instancedMonitors, false);
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, position: positionAttempt.state } : mon)));
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, position: positionAttempt.state } : mon)));
                 if (positionAttempt.state === AttemptState.Failed) {
                     failList.current.push({
                         monitorIdx: monitorsBeingApplied[i],
@@ -99,12 +106,12 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
                         reason: positionAttempt.reason
                     });
                 }
-                console.log("rotation called on monitor#", i);
-                console.log([...instancedMonitors.current])
+                // console.log("rotation called on monitor#", i);
+                // console.log([...instancedMonitors.current])
                 // //rotation
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, rotaiton: AttemptState.InProgress } : mon)));
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, rotaiton: AttemptState.InProgress } : mon)));
                 let rotationAttempt = await applyRotation(monitorsBeingApplied[i], instancedMonitors, false);
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, rotaiton: rotationAttempt.state } : mon)));
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, rotaiton: rotationAttempt.state } : mon)));
 
                 if (rotationAttempt.state === AttemptState.Failed) {
                     failList.current.push({
@@ -113,12 +120,12 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
                         reason: rotationAttempt.reason
                     });
                 }
-                console.log("monitor called on monitor#", i);
-                console.log([...instancedMonitors.current])
+                // console.log("monitor called on monitor#", i);
+                // console.log([...instancedMonitors.current])
                 // //mode
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, mode: AttemptState.InProgress } : mon)));
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, mode: AttemptState.InProgress } : mon)));
                 let modeAttempt = await applyMode(monitorsBeingApplied[i], instancedMonitors, false);
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, mode: modeAttempt.state } : mon)));
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, mode: modeAttempt.state } : mon)));
                 if (modeAttempt.state === AttemptState.Failed) {
                     failList.current.push({
                         monitorIdx: monitorsBeingApplied[i],
@@ -127,18 +134,18 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
                     });
                 }
             } else {
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? {
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? {
                     ...mon, position: AttemptState.Completed, rotation: AttemptState.Completed, mode: AttemptState.Completed
                 } : mon)));
             }
-            console.log("monitor#", i, " finished");
-            console.log([...instancedMonitors.current])
+            // console.log("monitor#", i, " finished");
+            // console.log([...instancedMonitors.current])
             //overall
             //TODO: this is not working properly
             if (failList.current.findIndex((fail) => (fail.monitorIdx === monitorsBeingApplied[i])) !== -1) {
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, overall: AttemptState.Failed } : mon)));
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, overall: AttemptState.Failed } : mon)));
             } else {
-                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === i ? { ...mon, overall: AttemptState.Completed } : mon)));
+                setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, overall: AttemptState.Completed } : mon)));
             }
         }
         setOnErrorScreen(true);
@@ -239,13 +246,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
         if (forced || !(newMonitors.current[focusedMonitorIdx].x === initialMonitors.current[focusedMonitorIdx].x
             && newMonitors.current[focusedMonitorIdx].y === initialMonitors.current[focusedMonitorIdx].y)) {
             console.log("positions internal called");
-            if (normalizePositionsRef.current) {
-                let normalizedMonitors = normalizePositionsRef.current!(newMonitors.current);
-                console.log("normalizedMonitors:", normalizedMonitors);
-                console.log("Type of normalizedMonitors:", typeof normalizedMonitors);
-                console.log("Is normalizedMonitors iterable?", normalizedMonitors?.[Symbol.iterator] !== undefined);
-                newMonitors.current = [...normalizedMonitors];
-            }
+
             await invoke("set_position", {
                 outputCrtc: newMonitors.current[focusedMonitorIdx].outputs[0].crtc,
                 x: newMonitors.current[focusedMonitorIdx].x,
@@ -277,7 +278,6 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
     //TODO: apply mode done with all of the previous changes causes the monitor to be disabled by xrander without any warning
     async function applyMode(focusedMonitorIdx: number, newMonitors: MutableRefObject<FrontendMonitor[]>, forced: boolean): Promise<Attempt> {
         let output: Attempt = { state: AttemptState.Unchanged, reason: "" };
-        let focusedRotation = newMonitors.current[focusedMonitorIdx].outputs[0].rotation;
         let oldMode = initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!;
         let newMode = newMonitors.current[focusedMonitorIdx].outputs[0].currentMode!;
         console.log("apply mode called on ", focusedMonitorIdx);
@@ -286,15 +286,15 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
             await invoke("set_mode", {
                 outputCrtc: newMonitors.current[focusedMonitorIdx].outputs[0].crtc,
                 modeXid: newMode.xid,
-                modeHeight: focusedRotation === Rotation.Normal || Rotation.Right ? newMode.height : newMode.width,
-                modeWidth: focusedRotation === Rotation.Normal || Rotation.Right ? newMode.width : newMode.height,
+                modeHeight: newMode.height,
+                modeWidth: newMode.width
             }).then(async () => {
                 if (!forced && await promptUserToUndo()) {
                     await invoke("set_mode", {
                         outputCrtc: newMonitors.current[focusedMonitorIdx].outputs[0].crtc,
                         modeXid: oldMode.xid,
-                        modeHeight: focusedRotation === Rotation.Normal || Rotation.Right ? oldMode.height : oldMode.width,
-                        modeWidth: focusedRotation === Rotation.Normal || Rotation.Right ? oldMode.width : oldMode.height,
+                        modeHeight: oldMode.height,
+                        modeWidth: oldMode.width,
                     });
                     newMonitors.current = [...resetFunctions.current.mode!(newMonitors.current, focusedMonitorIdx)];
                     output = { state: AttemptState.Undone, reason: "" };
@@ -367,13 +367,13 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
             <div className="popupContentsContainer" >
                 <h1 className="popupTitle">Applying Settings</h1>
                 <div className="monitorStatesContainer">
-                    {initialMonitors.current.map((mon, idx) => (<div key={mon.name} className="monitorState" >
-                        <h2 id={monitorStates[idx].overall}>{mon.name}</h2>
+                    {monitorsBeingChangedState.map((monIdx) => (<div key={initialMonitors.current[monIdx].name} className="monitorState" >
+                        <h2 id={monitorStates[monIdx].overall}>{initialMonitors.current[monIdx].name}</h2>
                         <hr />
-                        <h4 id={monitorStates[idx].enabled} >Enabled:{monitorStates[idx].enabled}</h4>
-                        <h4 id={monitorStates[idx].position} >Position:{monitorStates[idx].position}</h4>
-                        <h4 id={monitorStates[idx].rotaiton} >Rotation:{monitorStates[idx].rotaiton}</h4>
-                        <h4 id={monitorStates[idx].mode} >Mode:{monitorStates[idx].mode}</h4>
+                        <h4 id={monitorStates[monIdx].enabled} >Enabled:{monitorStates[monIdx].enabled}</h4>
+                        <h4 id={monitorStates[monIdx].position} >Position:{monitorStates[monIdx].position}</h4>
+                        <h4 id={monitorStates[monIdx].rotaiton} >Rotation:{monitorStates[monIdx].rotaiton}</h4>
+                        <h4 id={monitorStates[monIdx].mode} >Mode:{monitorStates[monIdx].mode}</h4>
                     </div>))}
                 </div>
                 <div className="popupButtonContainer">
