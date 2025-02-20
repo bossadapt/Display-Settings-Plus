@@ -34,42 +34,37 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     }, [setEnabled, resetPosition, resetRotation, resetModePreset]);
     //Enable
     ///used to disable the rest of the options:
-    const monitorEnabled = customMonitors[focusedMonitorIdx].outputs[0].currentMode!.xid !== 0;
-    function setEnabled(focusedMonitorIdx: number, enabled: boolean) {
+    function setEnabled(monitors: FrontendMonitor[], focusedMonitorIdx: number, enabled: boolean): FrontendMonitor[] {
         console.log("button enabled called");
         console.log(initialMonitors.current);
         console.log(customMonitors);
         if (enabled) {
             console.log("enabled");
             //updating page state
-            setMonitors((monList) =>
-                monList.map((mon, idx) => (
-                    idx === focusedMonitorIdx
-                        ? {
-                            ...mon,
-                            x: initialMonitors.current[focusedMonitorIdx].x,
-                            y: initialMonitors.current[focusedMonitorIdx].y,
-                            outputs: mon.outputs.map((out, outIdx) =>
-                                outIdx === 0
-                                    ? {
-                                        ...out,
-                                        rotation: initialMonitors.current[focusedMonitorIdx].outputs[0].rotation,
-                                        currentMode: out.currentMode
-                                            ? {
-                                                ...out.currentMode,
-                                                width: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.width,
-                                                height: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.height,
-                                                //if the initial config's mode was disabled, set it to the pefered mode
-                                                xid: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.xid !== 0 ? initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.xid : initialMonitors.current[focusedMonitorIdx].outputs[0].preferredModes[0].xid
-                                            }  // Ensure currentMode is not undefined
-                                            : undefined  // Preserve undefined if there's no currentMode
+            monitors = monitors.map((mon, idx) => (
+                idx === focusedMonitorIdx
+                    ? {
+                        ...mon,
+                        x: initialMonitors.current[focusedMonitorIdx].x,
+                        y: initialMonitors.current[focusedMonitorIdx].y,
+                        outputs: mon.outputs.map((out, outIdx) =>
+                            outIdx === 0
+                                ? {
+                                    ...out,
+                                    enabled: true,
+                                    rotation: initialMonitors.current[focusedMonitorIdx].outputs[0].rotation,
+                                    currentMode: {
+                                        ...out.currentMode,
+                                        xid: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.xid,
+                                        width: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.width,
+                                        height: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.height,
                                     }
-                                    : out
-                            )
-                        }
-                        : mon
-                ))
-            );
+                                }
+                                : out
+                        )
+                    }
+                    : mon
+            ))
         } else {
             console.log("disabled");
             //what happens inside the xrandr library:
@@ -80,45 +75,43 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             self.rotation = Rotation::Normal;
             self.outputs.clear();
             */
-            setMonitors((monList) =>
-                monList.map((mon, idx) => (
-                    idx === focusedMonitorIdx
-                        ? {
-                            ...mon,
-                            x: 0,
-                            y: 0,
-                            outputs: mon.outputs.map((out, outIdx) =>
-                                outIdx === 0
-                                    ? {
-                                        ...out,
-                                        rotation: Rotation.Normal,
-                                        currentMode: out.currentMode
-
-                                            ? {
-                                                ...out.currentMode,
-                                                width: initialMonitors.current[focusedMonitorIdx].widthPx,
-                                                height: initialMonitors.current[focusedMonitorIdx].heightPx,
-                                                xid: 0
-                                            }  // Ensure currentMode is not undefined
-                                            : undefined  // Preserve undefined if there's no currentMode
-                                    }
-                                    : out
-                            )
-                        }
-                        : mon
-                ))
-            );
-        }
-    }
-    function setCrtc(focusedMonitorIdx: number, newCrtc: number) {
-        setMonitors((mons) =>
-            mons.map((curMon, idx) =>
+            monitors = monitors.map((mon, idx) => (
                 idx === focusedMonitorIdx
-                    ? { ...curMon, outputs: curMon.outputs.map((out, outIdx) => (outIdx == 0 ? { ...out, crtc: newCrtc } : out)) }
-                    : curMon
-            )
-        );
+                    ? {
+                        ...mon,
+                        x: 0,
+                        y: 0,
+                        outputs: mon.outputs.map((out, outIdx) =>
+                            outIdx === 0
+                                ? {
+                                    ...out,
+                                    rotation: Rotation.Normal,
+                                    enabled: false,
+                                    currentMode: {
+                                        ...out.currentMode,
+                                        width: initialMonitors.current[focusedMonitorIdx].widthPx,
+                                        height: initialMonitors.current[focusedMonitorIdx].heightPx,
+                                        xid: 0
+                                    }
+                                }
+                                : out
+                        )
+                    }
+                    : mon
+            ));
+        }
+        setMonitors(monitors);
+        return monitors;
+    }
+    function setCrtc(monitors: FrontendMonitor[], focusedMonitorIdx: number, newCrtc: number): FrontendMonitor[] {
+        monitors = monitors.map((curMon, idx) =>
+            idx === focusedMonitorIdx
+                ? { ...curMon, outputs: curMon.outputs.map((out, outIdx) => (outIdx == 0 ? { ...out, crtc: newCrtc } : out)) }
+                : curMon
+        )
+        setMonitors(monitors);
         initialMonitors.current[focusedMonitorIdx].outputs[0].crtc = newCrtc;
+        return monitors;
     }
     //POSITIONS
     function setPositionX(x: number) {
@@ -142,14 +135,15 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
         );
     }
 
-    function resetPosition(focusedMonitorIdx: number) {
+    function resetPosition(monitors: FrontendMonitor[], focusedMonitorIdx: number): FrontendMonitor[] {
         console.log("Position reset called");
         console.log(initialMonitors.current);
         console.log(customMonitors);
-        setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
-            ? { ...curMon, x: initialMonitors.current[idx].x, y: initialMonitors.current[idx].y } : curMon)));
-
+        monitors = monitors.map((curMon, idx) => (idx === focusedMonitorIdx
+            ? { ...curMon, x: initialMonitors.current[idx].x, y: initialMonitors.current[idx].y } : curMon))
+        setMonitors(monitors);
         console.log("positions to :", initialMonitors.current[focusedMonitorIdx]);
+        return monitors;
     }
 
 
@@ -178,16 +172,18 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
         }
     }
 
-    function resetRotation(focusedMonitorIdx: number) {
+    function resetRotation(monitors: FrontendMonitor[], focusedMonitorIdx: number): FrontendMonitor[] {
         console.log("reset rotation called");
         console.log(initialMonitors.current);
         console.log(customMonitors);
-        setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
+        monitors = monitors.map((curMon, idx) => (idx === focusedMonitorIdx
             ? {
                 ...curMon, outputs: curMon.outputs.map((out, outIdx) => (outIdx === 0 ? {
                     ...out, rotation: initialMonitors.current[focusedMonitorIdx].outputs[0].rotation,
                 } : out))
-            } : curMon)));
+            } : curMon));
+        setMonitors(monitors);
+        return monitors;
     }
 
 
@@ -213,15 +209,16 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                 ? { ...curMon, outputs: curMon.outputs.map((out, outIdx) => (outIdx === 0 ? { ...out, currentMode: newVal } : out)) } : curMon)));
         }
     }
-    function resetModePreset(focusedMonitorIdx: number) {
+    function resetModePreset(monitors: FrontendMonitor[], focusedMonitorIdx: number): FrontendMonitor[] {
         console.log("mode reset called called");
         console.log(initialMonitors.current);
         console.log(customMonitors);
-
-        setMonitors((mons) => mons.map((curMon, idx) => (idx === focusedMonitorIdx
-            ? { ...curMon, outputs: curMon.outputs.map((out, outIdx) => (outIdx === 0 ? { ...out, currentMode: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode } : out)) } : curMon)));
+        monitors = monitors.map((curMon, idx) => (idx === focusedMonitorIdx
+            ? { ...curMon, outputs: curMon.outputs.map((out, outIdx) => (outIdx === 0 ? { ...out, currentMode: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode } : out)) } : curMon));
+        setMonitors(monitors)
         if (rerenderMonitorsContainerRef.current)
             rerenderMonitorsContainerRef.current(customMonitors)
+        return monitors
     }
 
     function resetAllFocused() {
@@ -236,11 +233,11 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             </div>
             <div className="settingsEditorContainer">
                 <label>
-                    <input type="checkbox" checked={monitorEnabled} onChange={() => { setEnabled(focusedMonitorIdx, !monitorEnabled) }} />
+                    <input type="checkbox" checked={customMonitors[focusedMonitorIdx].outputs[0].enabled} onChange={() => { setEnabled(customMonitors, focusedMonitorIdx, !customMonitors[focusedMonitorIdx].outputs[0].enabled) }} />
                     <div className="toggle"></div>
                 </label>
             </div>
-            <button className="resetButton" disabled={!monitorEnabled} onClick={resetAllFocused}>Reset<br></br>Monitor</button>
+            <button className="resetButton" disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} onClick={resetAllFocused}>Reset<br></br>Monitor</button>
 
         </div>
         <div className="settingsContainer">
@@ -249,11 +246,11 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             </div>
             <div className="settingsEditorContainer">
                 <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "-5px" }}>X:</h2>
-                <input disabled={!monitorEnabled} type="number" value={customMonitors[focusedMonitorIdx].x} onChange={(eve) => setPositionX(Number(eve.target.value))} />
+                <input disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} type="number" value={customMonitors[focusedMonitorIdx].x} onChange={(eve) => setPositionX(Number(eve.target.value))} />
                 <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "10px" }}>Y:</h2>
-                <input disabled={!monitorEnabled} type="number" value={customMonitors[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
+                <input disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} type="number" value={customMonitors[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
             </div>
-            <button className="resetButton" disabled={!monitorEnabled} onClick={() => { resetPosition(focusedMonitorIdx) }}>Reset</button>
+            <button className="resetButton" disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} onClick={() => { resetPosition(customMonitors, focusedMonitorIdx) }}>Reset</button>
 
         </div>
         <div className="settingsContainer">
@@ -261,11 +258,11 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                 <h2>Rotation:</h2>
             </div>
             <div className="settingsEditorContainer">
-                <Select isDisabled={!monitorEnabled} options={rotationOptions} onChange={(eve) => { changeRotation(eve?.value) }} value={rotationOptions.find((rot) =>
+                <Select isDisabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} options={rotationOptions} onChange={(eve) => { changeRotation(eve?.value) }} value={rotationOptions.find((rot) =>
                     (rot.value === customMonitors[focusedMonitorIdx].outputs[0].rotation)
                 )} theme={customSelectTheme}></Select>
             </div>
-            <button className="resetButton" disabled={!monitorEnabled} onClick={() => { resetRotation(focusedMonitorIdx) }}>Reset</button>
+            <button className="resetButton" disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} onClick={() => { resetRotation(customMonitors, focusedMonitorIdx) }}>Reset</button>
 
         </div>
         <div className="settingsContainer">
@@ -274,7 +271,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             </div>
             <div className="settingsEditorContainer">
                 <h2 style={{ marginLeft: "-5px", marginTop: "auto", marginBottom: "auto" }}>Ratio:</h2>
-                <Select isDisabled={!monitorEnabled} options={modeRatioOptions} onChange={(eve) => {
+                <Select isDisabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} options={modeRatioOptions} onChange={(eve) => {
                     if (eve) {
                         console.log("set eve.label to:", eve.label);
                         setFocusedModeRatio(eve.label)
@@ -283,7 +280,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                     return option.value === customMonitors[focusedMonitorIdx].outputs[0].currentMode!.name;
                 })} theme={customSelectTheme}></Select>
                 <h2 style={{ marginLeft: "10px", marginTop: "auto", marginBottom: "auto" }}>Rate:</h2>
-                <Select isDisabled={!monitorEnabled} options={modeFPSOptions} onChange={(eve) => changeModePreset(eve?.value)} value={modeFPSOptions.find((option) => {
+                <Select isDisabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} options={modeFPSOptions} onChange={(eve) => changeModePreset(eve?.value)} value={modeFPSOptions.find((option) => {
                     // console.log("RAN Rate VALUE CODE:")
                     // console.log(option.value);
                     // console.log(customMonitors[focusedMonitorIdx].outputs[0].currentMode);
@@ -291,7 +288,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                     return option.value.xid === customMonitors[focusedMonitorIdx].outputs[0].currentMode?.xid;
                 })} theme={customSelectTheme}></Select>
             </div>
-            <button className="resetButton" disabled={!monitorEnabled} onClick={() => { resetModePreset(focusedMonitorIdx) }}>Reset</button>
+            <button className="resetButton" disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} onClick={() => { resetModePreset(customMonitors, focusedMonitorIdx) }}>Reset</button>
 
         </div>
 

@@ -30,7 +30,7 @@ struct FrontendOutput {
     timestamp: XTime,
     #[serde(rename = "isPrimary")]
     is_primary: bool,
-    //might not want to pass this to the frontend in the future
+    enabled: bool,
     crtc: Option<XId>,
     //derived from crtc
     rotation: Rotation,
@@ -44,7 +44,7 @@ struct FrontendOutput {
     #[serde(rename = "preferredModes")]
     preferred_modes: Vec<Mode>,
     #[serde(rename = "currentMode")]
-    current_mode: Option<Mode>,
+    current_mode: Mode,
 }
 //dropping properties because its too extra for someone editing settings via gui to care
 #[tauri::command]
@@ -71,6 +71,7 @@ async fn get_monitors() -> Vec<FrontendMonitor> {
                     timestamp: out.timestamp,
                     is_primary: out.is_primary,
                     crtc: out.crtc,
+                    enabled: out.current_mode.is_some(),
                     rotation: res
                         .crtc(&mut xhandle, out.crtc.unwrap())
                         .unwrap()
@@ -91,10 +92,7 @@ async fn get_monitors() -> Vec<FrontendMonitor> {
                         .iter()
                         .map(|mode_id| res.mode(*mode_id).unwrap())
                         .collect(),
-                    current_mode: match out.current_mode {
-                        Some(value) => Some(res.mode(value).unwrap()),
-                        None => None,
-                    },
+                    current_mode: res.mode(out.current_mode.unwrap()).unwrap(),
                 })
                 .collect(),
         })
@@ -123,6 +121,7 @@ async fn get_monitors() -> Vec<FrontendMonitor> {
                     xid: out.xid,
                     timestamp: out.timestamp,
                     is_primary: out.is_primary,
+                    enabled: false,
                     crtc: out.crtc,
                     rotation: Rotation::Normal,
                     name: out.name.clone(),
@@ -140,10 +139,7 @@ async fn get_monitors() -> Vec<FrontendMonitor> {
                         .iter()
                         .map(|mode_id| res.mode(*mode_id).unwrap())
                         .collect(),
-                    current_mode: Some(Mode {
-                        xid: 0,
-                        ..preferred_mode
-                    }),
+                    current_mode: res.mode(out.preferred_modes[0]).unwrap(),
                 }],
             }
         })

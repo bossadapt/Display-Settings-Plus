@@ -16,18 +16,18 @@ interface LoadedProps {
 
 }
 export interface focusedSettingsFunctions {
-  enable: ((focusedMonitorIdx: number, enabled: boolean) => void) | null;
-  position: ((focusedMonitorIdx: number) => void) | null;
-  rotation: ((focusedMonitorIdx: number) => void) | null;
-  mode: ((focusedMonitorIdx: number) => void) | null;
-  setCrtc: ((focusedMonitorIdx: number, newCrtc: number) => void) | null;
+  enable: ((monitors: FrontendMonitor[], focusedMonitorIdx: number, enabled: boolean) => FrontendMonitor[]) | null;
+  position: ((monitors: FrontendMonitor[], focusedMonitorIdx: number) => FrontendMonitor[]) | null;
+  rotation: ((monitors: FrontendMonitor[], focusedMonitorIdx: number) => FrontendMonitor[]) | null;
+  mode: ((monitors: FrontendMonitor[], focusedMonitorIdx: number) => FrontendMonitor[]) | null;
+  setCrtc: ((monitors: FrontendMonitor[], focusedMonitorIdx: number, newCrtc: number) => FrontendMonitor[]) | null;
 }
 export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customMonitors, initialMonitors, presets, setCustMonitors }) => {
   const [focusedMonitorIdx, setFocusedMonitorIdx] = useState(0);
   const [focusedPresetIdx, setFocusedPresetIdx] = useState(0);
   const resetFunctions = useRef<focusedSettingsFunctions>({ enable: null, position: null, rotation: null, mode: null, setCrtc: null });
-  const applyChangesRef = useRef<Function | null>(null);
-  const normalizePositionsRef = useRef<((customMonitors: FrontendMonitor[]) => void) | null>(null);
+  const applyChangesRef = useRef<((customMonitors: FrontendMonitor[], monitorsBeingApplied: number[]) => void) | null>(null);
+  const normalizePositionsRef = useRef<((customMonitors: FrontendMonitor[]) => FrontendMonitor[]) | null>(null);
   const rerenderMonitorsContainerRef = useRef<((customMonitors: FrontendMonitor[]) => void) | null>(null);
   const presetsOptions = presets.current.map((_preset, idx) => ({ value: idx, label: "Preset " + idx }));
   //Collection handler
@@ -129,7 +129,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
       <div>
         <FocusedMonitorSettings resetFunctions={resetFunctions} focusedMonitorIdx={focusedMonitorIdx} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef}></FocusedMonitorSettings>
       </div>
-      <ApplySettingsPopup resetFunctions={resetFunctions} applyChangesRef={applyChangesRef} customMonitors={customMonitors} initialMonitors={initialMonitors} normalizePositionsRef={normalizePositionsRef}></ApplySettingsPopup>
+      <ApplySettingsPopup resetFunctions={resetFunctions} applyChangesRef={applyChangesRef} initialMonitors={initialMonitors} normalizePositionsRef={normalizePositionsRef}></ApplySettingsPopup>
     </div >
   );
 }

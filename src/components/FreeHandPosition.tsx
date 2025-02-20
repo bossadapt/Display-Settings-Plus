@@ -7,7 +7,7 @@ interface FreeHandPositionProps {
     customMonitors: FrontendMonitor[];
     setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
     rerenderMonitorsContainerRef: MutableRefObject<Function | null>;
-    normalizePositionsRef: MutableRefObject<((customMonitors: FrontendMonitor[]) => void) | null>;
+    normalizePositionsRef: MutableRefObject<((customMonitors: FrontendMonitor[]) => FrontendMonitor[]) | null>;
 }
 export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonitors, customMonitors, setMonitors: setCustMonitors, rerenderMonitorsContainerRef, normalizePositionsRef }) => {
     // within 10 px of another mon will cause a snap
@@ -115,13 +115,14 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         const monitorGraphic = new Graphics();
         const monitorText = new BitmapText();
         // handles if the monitor is disabled(should not be seen and interactive)
-        if (monitor.outputs[0].currentMode!.xid === 0) {
+        if (monitor.outputs[0].enabled) {
+            monitorContainer.eventMode = 'static';
+        } else {
             console.log("DISABLED ON FREEHANDTSX")
             console.log(monitor);
             monitorContainer.eventMode = 'none';
             monitorContainer.alpha = 0;
-        } else {
-            monitorContainer.eventMode = 'static';
+
         }
         //square
         let monitorWidth = monitor.outputs[0].currentMode!.width;
@@ -370,7 +371,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         snapEnabledRef.current = !snapEnabledRef.current;
     };
     ///Used to make it so the farthest left monitor starts at zero x and and lowest monitor to start at zero(adjusting all other monitors accordingly)
-    function normalizePositions(customMonitors: FrontendMonitor[]) {
+    function normalizePositions(monitors: FrontendMonitor[]): FrontendMonitor[] {
         if (app.current) {
             //console.log("initial XX:", initialMonitors.current[focusedMonitorIdx].x, "| YY:", initialMonitors.current[focusedMonitorIdx].y);
             let minOffsetY = Number.MAX_VALUE;
@@ -386,7 +387,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             })
             if (minOffsetX == Number.MAX_VALUE) {
                 //there are no monitors
-                return;
+                return monitors;
             }
             //revert the offset to normalize
             let newMonitors = [...customMonitors];
@@ -396,11 +397,17 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
                 newMonitors[idx].x = mon.x * monitorScale;
                 newMonitors[idx].y = mon.y * monitorScale;
             });
-            setCustMonitors(newMonitors);
+            setCustMonitors((oldMons) => (oldMons.map((mon, idx) => ({
+                ...mon,
+                x: newMonitors[idx].x,
+                y: newMonitors[idx].y
+            }))));
             screenDragOffsetTotal.current.x = 0;
             screenDragOffsetTotal.current.y = 0;
+            return newMonitors;
             //console.log("initial XX:", initialMonitors.current[focusedMonitorIdx].x, "| YY:", initialMonitors.current[focusedMonitorIdx].y);
         }
+        return monitors;
     }
 
     useEffect(() => {

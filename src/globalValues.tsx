@@ -61,6 +61,7 @@ export interface FrontendOutput {
     xid: number;
     timestamp: number;
     isPrimary: boolean;
+    enabled: boolean;
     crtc?: number;
     rotation: Rotation;
     name: string;
@@ -70,5 +71,5 @@ export interface FrontendOutput {
     clones: number[];
     modes: Mode[];
     preferredModes: Mode[];
-    currentMode?: Mode;
+    currentMode: Mode;
 }
