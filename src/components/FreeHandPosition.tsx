@@ -1,6 +1,6 @@
 import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, Renderer, BitmapText } from 'pixi.js';
 import { useState, useRef, Dispatch, SetStateAction, MutableRefObject, useEffect } from 'react';
-import { FrontendMonitor, point, Rotation } from '../globalValues';
+import { FrontendMonitor, point as Point, Rotation } from '../globalValues';
 
 interface FreeHandPositionProps {
     initialMonitors: MutableRefObject<FrontendMonitor[]>;
@@ -11,15 +11,15 @@ interface FreeHandPositionProps {
 }
 export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonitors, customMonitors, setMonitors: setCustMonitors, rerenderMonitorsContainerRef, normalizePositionsRef }) => {
     // within 10 px of another mon will cause a snap
-    const snapPixelLength = 50;
     const dragTarget = useRef<null | Container<ContainerChild>>(null)
     const screenDragActive = useRef(false);
-    const screenDragOffsetTotal = useRef<point>({ x: 0, y: 0 });
+    const screenDragOffsetTotal = useRef<Point>({ x: 0, y: 0 });
     const monitorScale = 10;
     const initialDragX = useRef(0);
     const initialDragY = useRef(0);
-    const previousDragOffsetX = useRef(0);
-    const previousDragOffsetY = useRef(0);
+    const previousMonitorOffset = useRef<Point>({ x: 0, y: 0 });
+    const previousScreenOffset = useRef<Point>({ x: 0, y: 0 });
+
     const app = useRef<Application | null>(null);
     //needs to be use state to update button color
     const [snapEnabled, setSnapEnabled] = useState(true);
@@ -39,6 +39,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         appLocal.stage.on('rightdown', onScreenDragStart);
         appLocal.stage.on('rightup', onScreenDragEnd);
         appLocal.stage.on('rightupoutside', onScreenDragEnd);
+
         appLocal.stage.on('pointerup', onDragEnd);
         appLocal.stage.on('pointerupoutside', onDragEnd);
         //TODO: maybe make it scalable by turning monitorScale into a useRef
@@ -48,39 +49,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
 
     }
 
-    //TODO: maybe add the grid and fix the frequency of lines and make the move 
-    // function createGrid(appLocal: Application<Renderer>) {
-    //     let grid = new Graphics();
-    //     //based off of https://pixijs.com/8.x/examples/graphics/pixel-line
-    //     // Draw 10 vertical lines spaced 10 pixels apart
-    //     // Draw 10 vertical lines spaced 10 pixels apart
-    //     for (let i = 0; i < appLocal.stage.width / 100; i++) {
-    //         // Move to top of each line (x = i*10, y = 0)
-    //         grid
-    //             .moveTo(i * 10, 0)
-    //             // Draw down to bottom (x = i*10, y = 100)
-    //             .lineTo(i * 10, 100);
-    //     }
 
-    //     // Draw 10 horizontal lines spaced 10 pixels apart
-    //     for (let i = 0; i < appLocal.stage.height / 100; i++) {
-    //         // Move to start0, 100);
-    //     }
-
-    //     // Draw 10 horizontal lines spaced 10 pixels apart
-    //     for (let i = 0; i < appLocal.stage.height / 100; i++) {
-    //         // Move to start of each line (x = 0, y = i*10)
-    //         grid
-    //             .moveTo(0, i * 10)
-    //             // Draw across to end (x = 100, y = i*10)
-    //             .lineTo(300, i * 10);
-    //     }
-    //     console.log("height: ", appLocal.stage.height);
-    //     console.log("width: ", appLocal.stage.width);
-    //     grid.stroke({ color: '#ffffff', pixelLine: false, width: 1 });
-    //     appLocal.stage.addChild(grid);
-
-    // }
     function updateGlobalPosition(monitorName: string, x: number, y: number) {
         setCustMonitors((mons) =>
             mons.map((curMon) =>
@@ -100,6 +69,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             for (let i = 0; i < newMonitors.length; i++) {
                 app.current!.stage.addChild(createMonitorContainer(newMonitors[i]));
             }
+
         } else {
             console.log("app not built yet, unable to rerender");
         }
@@ -122,7 +92,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             console.log(monitor);
             monitorContainer.eventMode = 'none';
             monitorContainer.alpha = 0;
-
         }
         //square
         let monitorWidth = monitor.outputs[0].currentMode!.width;
@@ -170,176 +139,147 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         return monitorContainer;
     }
     function onScreenDragStart(eve: FederatedPointerEvent) {
+        console.log("dragging called");
         screenDragActive.current = true;
-        previousDragOffsetX.current = eve.globalX;
-        previousDragOffsetY.current = eve.globalY;
+        previousScreenOffset.current.x = eve.globalX;
+        previousScreenOffset.current.y = eve.globalY;
         app.current!.stage.on('pointermove', onScreenMove);
     }
     function onScreenMove(eve: FederatedPointerEvent) {
-        console.log("screen drag")
-        if (screenDragActive.current) {
-            let difX = eve.globalX - previousDragOffsetX.current;
-            let difY = eve.globalY - previousDragOffsetY.current;
-            previousDragOffsetX.current = eve.globalX;
-            previousDragOffsetY.current = eve.globalY;
-            screenDragOffsetTotal.current.x += difX;
-            screenDragOffsetTotal.current.y += difY;
-            app.current!.stage.children.forEach((child) => {
-                child.x += difX;
-                child.y += difY;
-            });
-        }
+        console.log("on screen")
+        let cursorPosition = app.current!.renderer.events.pointer;
+        let difX = eve.globalX - previousScreenOffset.current.x;
+        let difY = eve.globalY - previousScreenOffset.current.y;
+        console.log("globalx:", eve.globalX);
+        console.log("globaly:", eve.globalY);
+        console.log("cursorx:", cursorPosition.x);
+        console.log("cursory:", cursorPosition.y);
+        console.log("difx:", difX);
+        console.log("dify:", difY);
+        console.log("Previous1  dragx:", previousScreenOffset.current.x);
+        console.log("Previous1  dragy:", previousScreenOffset.current.y);
+        previousScreenOffset.current.x = eve.globalX;
+        previousScreenOffset.current.y = eve.globalY;
+        console.log("Previous2  dragx:", previousScreenOffset.current.x);
+        console.log("Previous2  dragy:", previousScreenOffset.current.y);
+        screenDragOffsetTotal.current.x += difX;
+        screenDragOffsetTotal.current.y += difY;
+        app.current!.stage.children.forEach((child) => {
+            console.log("child changed");
+            child.x += difX;
+            child.y += difY;
+        });
+
     }
     function onScreenDragEnd() {
-        if (screenDragActive.current) {
+        console.log("drag screen end")
+        if (app.current) {
             app.current!.stage.off('pointermove', onScreenMove);
-            screenDragActive.current = false;
         }
+        screenDragActive.current = false;
     }
     function onDragMove(eve: FederatedPointerEvent) {
-        let difX = eve.globalX - previousDragOffsetX.current;
-        let difY = eve.globalY - previousDragOffsetY.current;
-        previousDragOffsetX.current = eve.globalX;
-        previousDragOffsetY.current = eve.globalY;
+        let difX = eve.globalX - previousMonitorOffset.current.x;
+        let difY = eve.globalY - previousMonitorOffset.current.y;
+        previousMonitorOffset.current.x = eve.globalX;
+        previousMonitorOffset.current.y = eve.globalY;
         if (dragTarget.current) {
             dragTarget.current.x += difX;
             dragTarget.current.y += difY;
         }
     }
     function onDragStart(eve: FederatedPointerEvent) {
-        // Store a reference to the data
-        // * The reason for this is because of multitouch *
-        // * We want to track the movement of this particular touch *
         eve.target.alpha = 0.5;
         dragTarget.current = eve.target;
 
         initialDragX.current = eve.target.x;
         initialDragY.current = eve.target.x;
 
-        previousDragOffsetX.current = eve.globalX;
-        previousDragOffsetY.current = eve.globalY;
+        previousMonitorOffset.current.x = eve.globalX;
+        previousMonitorOffset.current.y = eve.globalY;
 
         app.current!.stage.on('pointermove', onDragMove);
     }
-    function overLapEachOther(x1: number, y1: number, width1: number, height1: number,
-        x2: number, y2: number, width2: number, height2: number
-    ): boolean {
-        // Calculate the edges of the first square
-        const left1 = x1;
-        const right1 = x1 + width1;
-        const top1 = y1;
-        const bottom1 = y1 + height1;
 
-        // Calculate the edges of the second square
-        const left2 = x2;
-        const right2 = x2 + width2;
-        const top2 = y2;
-        const bottom2 = y2 + height2;
+    ///Generates 8 points
+    /// Top left, Top Middle, Top Right
+    /// Left Middle , Right Middle
+    //  Bottom Left, Bottome Middle, Bottom Right
+    function container2Points(monitor: Container): Point[] {
+        //handling redundant math
+        let middleX = monitor.x + (monitor.width / 2);
+        let middleY = monitor.y + (monitor.height / 2);
+        let right = monitor.x + monitor.width;
+        let bottom = monitor.y + monitor.height;
+        return [
+            // Top left
+            { x: monitor.x, y: monitor.y },
+            // Top Middle
+            { x: middleX, y: monitor.y },
+            // Top Right
+            { x: right, y: monitor.y },
+            //Left Middle
+            { x: monitor.x, y: middleY },
+            //Right Middle
+            { x: right, y: middleY },
+            //Bottom Left
+            { x: monitor.x, y: bottom },
+            //Bottom Middle
+            { x: middleX, y: bottom },
+            //Bottom Right
+            { x: right, y: bottom }
 
-        // Check if the squares overlap
-        if (left1 < right2 &&
-            right1 > left2 &&
-            top1 < bottom2 &&
-            bottom1 > top2) {
-            return true;
-        }
-
-        return false;
+        ];
     }
+    interface pointDiff {
+        difX: number,
+        difY: number,
+        absDifTotal: number
+    }
+    function points2PointDiff(dropPoints: Point[], targetPoints: Point[]): pointDiff[] {
+        let output: pointDiff[] = [];
+        for (let dropPointIndex = 0; dropPointIndex < dropPoints.length; dropPointIndex++) {
+            for (let targetPointIndex = 0; targetPointIndex < targetPoints.length; targetPointIndex++) {
+                let difX = targetPoints[targetPointIndex].x - dropPoints[dropPointIndex].x;
+                let difY = targetPoints[targetPointIndex].y - dropPoints[dropPointIndex].y;
+                output.push({
+                    difX,
+                    difY,
+                    absDifTotal: Math.abs(difX) + Math.abs(difY)
+                });
+            }
+        }
+        return output;
+    }
+
     function onDragEnd() {
-        if (dragTarget.current) {
+        if (dragTarget.current && app.current) {
             if (snapEnabledRef.current) {
-                console.log("snap enabled: ", snapEnabledRef.current);
-                //check if its within hit boxes located outside right outside of each monitor
-                let monitorsHitboxInsideOf = app.current!.stage.children.filter(
-                    (mon) => {
-                        if (mon === dragTarget.current || mon.alpha === 0) {
-                            return false;
-                        } else {
-                            let hitbox = {
-                                xStart: mon.x - snapPixelLength - dragTarget.current!.width, xEnd: mon.x + mon.width + snapPixelLength,
-                                yStart: mon.y - snapPixelLength - dragTarget.current!.height, yEnd: mon.y + mon.height + snapPixelLength
-
-                            };
-                            if (dragTarget.current!.y > hitbox.yStart && dragTarget.current!.y < hitbox.yEnd &&
-                                dragTarget.current!.x > hitbox.xStart && dragTarget.current!.x < hitbox.xEnd
-                            ) {
-                                return true;
-                            }
-                            return false;
-                        }
+                let dropPoints = container2Points(dragTarget.current);
+                let lowestDif: pointDiff = { difX: 0, difY: 0, absDifTotal: Number.MAX_VALUE };
+                for (let i = 0; i < app.current.stage.children.length; i++) {
+                    if (app.current.stage.children[i] == dragTarget.current) {
+                        continue;
                     }
-                );
-                if (monitorsHitboxInsideOf.length != 0) {
-                    //choose the closer one
-                    let monitorSnapTarget = monitorsHitboxInsideOf[0];
-                    let lowestDistance = Math.abs(monitorsHitboxInsideOf[0].x - dragTarget.current.x) + Math.abs(monitorsHitboxInsideOf[0].y - dragTarget.current.y);
-                    for (let i = 1; i < monitorsHitboxInsideOf.length; i++) {
-                        let curDistance = Math.abs(monitorsHitboxInsideOf[i].x - dragTarget.current.x) + Math.abs(monitorsHitboxInsideOf[i].y - dragTarget.current.y);
-                        if (curDistance < lowestDistance) {
-                            lowestDistance = curDistance;
-                            monitorSnapTarget = monitorsHitboxInsideOf[i];
-                        }
-                    }
-                    //invalidate snaps that overrun other monitors + figure out which side to snap to and do it
-                    let difX = dragTarget.current.x - monitorSnapTarget.x;
-                    let difY = dragTarget.current.y - monitorSnapTarget.y;
-                    let validTop = app.current!.stage.children.find((child) =>
-
-                        child != dragTarget.current && child.alpha !== 0 && overLapEachOther(child.x, child.y, child.width, child.height,
-                            monitorSnapTarget.x, monitorSnapTarget.y - monitorSnapTarget.height, monitorSnapTarget.width, monitorSnapTarget.height)
-                    ) == undefined;
-                    let validRight = app.current!.stage.children.find((child) =>
-                        child !== dragTarget.current && child.alpha !== 0 && overLapEachOther(child.x, child.y, child.width, child.height,
-                            monitorSnapTarget.x + monitorSnapTarget.width, monitorSnapTarget.y, monitorSnapTarget.width, monitorSnapTarget.height)
-                    ) == undefined;
-                    let validLeft = app.current!.stage.children.find((child) =>
-                        child !== dragTarget.current && child.alpha !== 0 && overLapEachOther(child.x, child.y, child.width, child.height,
-                            monitorSnapTarget.x - monitorSnapTarget.width, monitorSnapTarget.y, monitorSnapTarget.width, monitorSnapTarget.height)
-                    ) == undefined;
-                    let validBottom = app.current!.stage.children.find((child) =>
-                        child !== dragTarget.current && child.alpha !== 0 && overLapEachOther(child.x, child.y, child.width, child.height,
-                            monitorSnapTarget.x, monitorSnapTarget.y + monitorSnapTarget.height, monitorSnapTarget.width, monitorSnapTarget.height)
-                    ) == undefined;
-                    //console.log("TValid" + validTop + ",BValid:" + validBottom + ",RValid:" + validRight + ",LValid" + validLeft);
-                    if (!validTop && !validBottom && !validRight && !validLeft) {
-                        //user trying to play games with me, send em back to start
-                        console.log("failed to find space for snap, returing to original position");
-                        dragTarget.current.x = initialDragX.current;
-                        dragTarget.current.y = initialDragY.current;
-                        return;
-                    }
-                    //snapping it
-                    //TODO: allow snapping of bottom anchors ontop of the top right to rop left, also add snapping for same as
-                    if (Math.abs(difX) > Math.abs(difY) || (!validTop && !validBottom)) {
-                        if ((difX < 0 && validLeft) || !validRight) {
-                            //left
-                            dragTarget.current.x = monitorSnapTarget.x - dragTarget.current.width;
-                            dragTarget.current.y = monitorSnapTarget.y;
-                        } else {
-                            //right
-                            dragTarget.current.x = monitorSnapTarget.x + monitorSnapTarget.width;
-                            dragTarget.current.y = monitorSnapTarget.y;
-                        }
-                    } else {
-                        if ((difY < 0 && validTop) || !validBottom) {
-                            //up
-                            dragTarget.current.x = monitorSnapTarget.x;
-                            dragTarget.current.y = monitorSnapTarget.y - dragTarget.current.height;
-                        } else {
-                            //down
-                            dragTarget.current.x = monitorSnapTarget.x;
-                            dragTarget.current.y = monitorSnapTarget.y + monitorSnapTarget.height;
+                    let currentDifCollection = points2PointDiff(dropPoints, container2Points(app.current.stage.children[i]));
+                    for (let difIndex = 0; difIndex < currentDifCollection.length; difIndex++) {
+                        if (currentDifCollection[difIndex].absDifTotal < lowestDif.absDifTotal) {
+                            lowestDif = currentDifCollection[difIndex];
                         }
                     }
                 }
+                console.log("Lowest: ", lowestDif);
+                dragTarget.current.x += lowestDif.difX;
+                dragTarget.current.y += lowestDif.difY;
             }
             updateGlobalPosition(dragTarget.current.label, (dragTarget.current.x - screenDragOffsetTotal.current.x) * monitorScale, (dragTarget.current.y - screenDragOffsetTotal.current.y) * monitorScale);
-            app.current!.stage.off('pointermove', onDragMove);
+
             dragTarget.current.alpha = 1;
             dragTarget.current = null;
+
         }
-        //check if its in snapping hitbox  and snapping enabled
+        app.current!.stage.off('pointermove', onDragMove);
+
     }
     function resetCameraPosition() {
         if (app.current) {

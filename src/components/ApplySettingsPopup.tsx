@@ -58,7 +58,6 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
     const undoButtonPressed = useRef(false);
     const nextButtonPressed = useRef(false);
 
-    //TODO: check how enable interacts with everything
     //TODO: possibly disable the scrolling happening in the background
     async function applyAllChanges(customMonitors: FrontendMonitor[], monitorsBeingApplied: number[]) {
         setNextButtonText("...");
@@ -141,7 +140,6 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
             // console.log("monitor#", i, " finished");
             // console.log([...instancedMonitors.current])
             //overall
-            //TODO: this is not working properly
             if (failList.current.findIndex((fail) => (fail.monitorIdx === monitorsBeingApplied[i])) !== -1) {
                 setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, overall: AttemptState.Failed } : mon)));
             } else {
@@ -238,7 +236,6 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
         }
         return output;
     }
-    //TODO: starting the program with a disabled monitor and trying to enable and reposition causes a null position
     async function applyPosition(focusedMonitorIdx: number, newMonitors: MutableRefObject<FrontendMonitor[]>, forced: boolean): Promise<Attempt> {
         //TODO: ensure that freehand position comes before any of the other screens
         let output: Attempt = { state: AttemptState.Unchanged, reason: "" };
