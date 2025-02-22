@@ -44,35 +44,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
     useEffect(() => {
         applyChangesRef.current = applyAllChanges;
     }, []);
-    const failList = useRef<FailInfos[]>([{
-        monitorIdx: 0,
-        settingName: "positions",
-        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
-    }, {
-        monitorIdx: 0,
-        settingName: "positions",
-        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
-    }, {
-        monitorIdx: 0,
-        settingName: "positions",
-        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
-    }, {
-        monitorIdx: 0,
-        settingName: "positions",
-        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
-    }, {
-        monitorIdx: 0,
-        settingName: "positions",
-        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
-    }, {
-        monitorIdx: 0,
-        settingName: "positions",
-        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
-    }, {
-        monitorIdx: 0,
-        settingName: "positions",
-        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
-    }]);
+    const failList = useRef<FailInfos[]>([]);
     const [showPopup, setShowPopup] = useState(true);
     const [monitorStates, setMonitorStates] = useState<MonitorApplyState[]>(new Array(initialMonitors.current.length).fill(
         { ...defaultMonitorApplyState }
@@ -89,7 +61,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
     //TODO: possibly disable the scrolling happening in the background
     async function applyAllChanges(customMonitors: FrontendMonitor[], monitorsBeingApplied: number[]) {
         setNextButtonText("...");
-        setOnErrorScreen(true);
+        setOnErrorScreen(false);
         failList.current = [];
         console.log("Pop up showing");
         setMonitorStates(new Array(initialMonitors.current.length).fill(
@@ -102,7 +74,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
         }
         monitorsBeingApplied.sort((m1, m2) => instancedMonitors.current[m1].x - instancedMonitors.current[m2].x);
         setMonitorsBeingChangedState(monitorsBeingApplied);
-        setShowPopup(true);
+        setShowPopup(false);
         for (let i = 0; i < monitorsBeingApplied.length; i++) {
             //set new monitor to in progress along with enable
             setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, overall: AttemptState.InProgress, enabled: AttemptState.InProgress } : mon)));
