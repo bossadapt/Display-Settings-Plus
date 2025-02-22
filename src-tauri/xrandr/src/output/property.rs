@@ -6,7 +6,6 @@ use x11::{xlib, xrandr};
 use crate::{atom_name, real_bool, HandleSys, XHandle, XrandrError};
 
 #[derive(Debug)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Property {
     pub name: String,
     pub value: Value,
@@ -56,14 +55,7 @@ impl Property {
         let format = format.into();
         let value_type: ValueType = value_type.into();
 
-        let value = Self::get_value(
-            &mut handle.sys,
-            &name,
-            value_type,
-            format,
-            items_len,
-            prop,
-        )?;
+        let value = Self::get_value(&mut handle.sys, &name, value_type, format, items_len, prop)?;
 
         let info = unsafe {
             ptr::NonNull::new(xrandr::XRRQueryOutputProperty(
@@ -77,13 +69,12 @@ impl Property {
         let is_immutable = unsafe { real_bool(info.as_ref().immutable) };
         let is_pending = unsafe { real_bool(info.as_ref().pending) };
 
-        let values = unsafe {
-            Self::get_values(&mut handle.sys, info.as_ref(), value_type, format)?
-        };
+        let values =
+            unsafe { Self::get_values(&mut handle.sys, info.as_ref(), value_type, format)? };
 
-        unsafe { 
+        unsafe {
             xlib::XFree(info.as_ptr().cast());
-            xlib::XFree(prop.cast()) 
+            xlib::XFree(prop.cast())
         };
 
         Ok(Self {
@@ -121,9 +112,7 @@ impl Property {
                 ValueFormat::B16 => Value::from_c16(data, len),
                 ValueFormat::B32 => Value::from_c32(data, len),
             },
-            ValueType::Unrecognized(type_sys) => {
-                Value::unrecognized(type_sys, format)
-            }
+            ValueType::Unrecognized(type_sys) => Value::unrecognized(type_sys, format),
         };
 
         Ok(value)
@@ -136,14 +125,10 @@ impl Property {
         format: ValueFormat,
     ) -> Result<Option<Values>, XrandrError> {
         let values = if info.num_values > 0 {
-            let values = unsafe {
-                slice::from_raw_parts(info.values, info.num_values as usize)
-            };
+            let values = unsafe { slice::from_raw_parts(info.values, info.num_values as usize) };
             let values = if real_bool(info.range) {
                 match value_type {
-                    ValueType::Atom => {
-                        Ranges::from_atom(handle, values)?.into()
-                    }
+                    ValueType::Atom => Ranges::from_atom(handle, values)?.into(),
 
                     ValueType::Int => match format {
                         ValueFormat::B8 => Ranges::from_i8(values).into(),
@@ -157,15 +142,11 @@ impl Property {
                         ValueFormat::B32 => Ranges::from_c32(values).into(),
                     },
 
-                    ValueType::Unrecognized(type_sys) => {
-                        Values::unrecognized(type_sys, format)
-                    }
+                    ValueType::Unrecognized(type_sys) => Values::unrecognized(type_sys, format),
                 }
             } else {
                 match value_type {
-                    ValueType::Atom => {
-                        Supported::from_atom(handle, values)?.into()
-                    }
+                    ValueType::Atom => Supported::from_atom(handle, values)?.into(),
 
                     ValueType::Int => match format {
                         ValueFormat::B8 => Supported::from_i8(values).into(),
@@ -179,9 +160,7 @@ impl Property {
                         ValueFormat::B32 => Supported::from_c32(values).into(),
                     },
 
-                    ValueType::Unrecognized(type_sys) => {
-                        Values::unrecognized(type_sys, format)
-                    }
+                    ValueType::Unrecognized(type_sys) => Values::unrecognized(type_sys, format),
                 }
             };
             Some(values)
@@ -240,7 +219,6 @@ impl From<i32> for ValueFormat {
 }
 
 #[derive(Debug)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Value {
     Edid(Vec<u8>),
     Guid([u8; 16]),
@@ -272,10 +250,7 @@ impl Value {
         Self::Guid(guid)
     }
 
-    fn from_atom(
-        handle: &mut HandleSys,
-        data: *const u8,
-    ) -> Result<Self, XrandrError> {
+    fn from_atom(handle: &mut HandleSys, data: *const u8) -> Result<Self, XrandrError> {
         // REMOVED: this cast is undefined behaviour
         // let data = unsafe { *(data.cast::<xlib::Atom>()) };
         let data = unsafe { u64::from(*data) };
@@ -313,7 +288,6 @@ impl Value {
 }
 
 #[derive(Debug)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Values {
     Range(Ranges),
     Supported(Supported),
@@ -342,7 +316,6 @@ impl From<Supported> for Values {
 }
 
 #[derive(Debug)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Ranges {
     Atom(Vec<Range<String>>),
     Integer8(Vec<Range<i8>>),
@@ -354,27 +327,21 @@ pub enum Ranges {
 }
 
 #[derive(Debug)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Range<T> {
     pub lower: T,
     pub upper: T,
 }
 
 impl Ranges {
-    fn from_atom(
-        handle: &mut HandleSys,
-        values: &[i64],
-    ) -> Result<Self, XrandrError> {
+    fn from_atom(handle: &mut HandleSys, values: &[i64]) -> Result<Self, XrandrError> {
         let values = values
             .chunks_exact(2)
             .map(|values| {
                 let lower = values[0];
                 let upper = values[1];
 
-                let lower =
-                    unsafe { *(lower as *const i64).cast::<xlib::Atom>() };
-                let upper =
-                    unsafe { *(upper as *const i64).cast::<xlib::Atom>() };
+                let lower = unsafe { *(lower as *const i64).cast::<xlib::Atom>() };
+                let upper = unsafe { *(upper as *const i64).cast::<xlib::Atom>() };
 
                 let lower = atom_name(handle, lower)?;
                 let upper = atom_name(handle, upper)?;
@@ -425,7 +392,6 @@ impl Ranges {
 }
 
 #[derive(Debug)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Supported {
     Atom(Vec<String>),
     Integer8(Vec<i8>),
@@ -437,15 +403,11 @@ pub enum Supported {
 }
 
 impl Supported {
-    fn from_atom(
-        handle: &mut HandleSys,
-        values: &[i64],
-    ) -> Result<Self, XrandrError> {
+    fn from_atom(handle: &mut HandleSys, values: &[i64]) -> Result<Self, XrandrError> {
         let values = values
             .iter()
             .map(|val| {
-                let val = 
-                    unsafe { *((val as *const i64).cast::<xlib::Atom>()) };
+                let val = unsafe { *((val as *const i64).cast::<xlib::Atom>()) };
                 let val = atom_name(handle, val)?;
                 Ok(val)
             })

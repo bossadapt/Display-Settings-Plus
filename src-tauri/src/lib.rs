@@ -4,7 +4,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use xrandr::{Crtc, Mode, Rotation, ScreenResources, XHandle, XId, XTime, XrandrError};
+use xrandr::{Crtc, Mode, Rotation, ScreenResources, XHandle, XId, XrandrError};
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 //added this to serialize without editing the library
 #[derive(Serialize, Deserialize, Debug)]
@@ -44,7 +44,7 @@ struct FrontendOutput {
 async fn get_monitors() -> Result<Vec<FrontendMonitor>, XrandrError> {
     let mut xhandle = XHandle::open()?;
     let res = ScreenResources::new(&mut xhandle)?;
-    let outputs = xhandle.all_outputs()?;
+    let outputs = res.outputs(&mut xhandle, &res)?;
     let enabled_monitors: Vec<FrontendMonitor> = outputs
         .iter()
         .filter(|&out| out.connected && out.current_mode.is_some())
@@ -167,13 +167,13 @@ async fn set_enabled(xid: u64, enabled: bool) -> Result<u64, XrandrError> {
     //setting up vars
     let mut xhandle = XHandle::open()?;
     let res = ScreenResources::new(&mut xhandle)?;
-    let focused_output = res.output(&mut xhandle, xid)?;
+    let focused_output = res.output(&mut xhandle, xid, &res)?;
     //making the change
     let mut new_crtc = 0;
     if enabled {
-        new_crtc = xhandle.enable(&focused_output)?;
+        new_crtc = xhandle.enable(&focused_output, &res)?;
     } else {
-        xhandle.disable(&focused_output)?;
+        xhandle.disable(&focused_output, &res)?;
     }
     return Ok(new_crtc);
 }
@@ -186,8 +186,9 @@ async fn set_mode(
 ) -> Result<(), XrandrError> {
     //setting up vars
     let mut xhandle = XHandle::open()?;
+    let res = ScreenResources::new(&mut xhandle)?;
     //making the change
-    xhandle.set_mode(output_crtc, mode_xid, mode_height, mode_width)?;
+    xhandle.set_mode(output_crtc, mode_xid, mode_height, mode_width, &res)?;
     return Ok(());
 }
 #[tauri::command]
@@ -263,35 +264,38 @@ async fn quick_apply(monitors: Vec<MiniMonitor>) -> Result<Vec<Option<u64>>, Xra
     let mut crtcs: Vec<Crtc> = Vec::new();
     let mut crtc_ids: Vec<Option<u64>> = Vec::new();
     let res = ScreenResources::new(&mut xhandle).unwrap();
-
-    for monitor in monitors {
-        let output = res.output(&mut xhandle, monitor.output_xid)?;
+    let outputs = res.outputs(&mut xhandle, &res)?;
+    for current_monitor in monitors {
+        let current_output = outputs
+            .iter()
+            .find(|out| out.xid == current_monitor.output_xid)
+            .unwrap();
         let mut crtc: Crtc;
-        if monitor.enabled {
+        if current_monitor.enabled {
             //enable
-            if output.current_mode.is_some() && output.crtc.is_some() {
+            if current_output.current_mode.is_some() && current_output.crtc.is_some() {
                 //crtc  was already enabled
-                crtc = res.crtc(&mut xhandle, output.crtc.unwrap())?;
+                crtc = res.crtc(&mut xhandle, current_output.crtc.unwrap())?;
             } else {
                 //crtc needs to be enabled
-                crtc = xhandle.find_available_crtc(&output)?;
-                crtc.outputs = vec![output.xid];
+                crtc = xhandle.find_available_crtc(&current_output, &res)?;
+                crtc.outputs = vec![current_output.xid];
             }
             //position
-            crtc.x = monitor.x.parse().unwrap();
-            crtc.y = monitor.y.parse().unwrap();
+            crtc.x = current_monitor.x.parse().unwrap();
+            crtc.y = current_monitor.y.parse().unwrap();
             //mode
-            crtc.mode = monitor.mode_xid;
-            crtc.height = monitor.mode_height;
-            crtc.width = monitor.mode_width;
+            crtc.mode = current_monitor.mode_xid;
+            crtc.height = current_monitor.mode_height;
+            crtc.width = current_monitor.mode_width;
             //rotation
-            crtc.rotation = monitor.rotation;
+            crtc.rotation = current_monitor.rotation;
             //finalize
             crtc_ids.push(Some(crtc.xid));
             crtcs.push(crtc);
         } else {
             //Disable
-            if let Some(crtc_id) = output.crtc {
+            if let Some(crtc_id) = current_output.crtc {
                 let mut crtc = res.crtc(&mut xhandle, crtc_id)?;
                 crtc.x = 0;
                 crtc.y = 0;
@@ -303,7 +307,7 @@ async fn quick_apply(monitors: Vec<MiniMonitor>) -> Result<Vec<Option<u64>>, Xra
             crtc_ids.push(None);
         }
     }
-    xhandle.apply_new_crtcs(&mut crtcs)?;
+    xhandle.apply_new_crtcs(&mut crtcs, &res)?;
     Ok(crtc_ids)
 }
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
