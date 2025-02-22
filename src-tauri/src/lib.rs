@@ -44,12 +44,19 @@ struct FrontendOutput {
 async fn get_monitors() -> Result<Vec<FrontendMonitor>, XrandrError> {
     let mut xhandle = XHandle::open()?;
     let res = ScreenResources::new(&mut xhandle)?;
-    let outputs = res.outputs(&mut xhandle, &res)?;
+    let crtcs = res.crtcs(&mut xhandle)?;
+    let modes = res.modes();
+    let outputs = res.outputs(&mut xhandle, Some(&crtcs), &res)?;
+    //TODO: crtcs and modes(for peffered and modes) should be called and picked apart
     let enabled_monitors: Vec<FrontendMonitor> = outputs
         .iter()
         .filter(|&out| out.connected && out.current_mode.is_some())
         .map(|out| {
-            let focused_crtc: Crtc = res.crtc(&mut xhandle, out.crtc.unwrap()).unwrap();
+            let focused_crtc: Crtc = crtcs
+                .iter()
+                .find(|crtc| crtc.xid == out.crtc.unwrap())
+                .unwrap()
+                .clone();
             return FrontendMonitor {
                 name: out.name.clone(),
                 is_primary: out.is_primary,
@@ -62,28 +69,26 @@ async fn get_monitors() -> Result<Vec<FrontendMonitor>, XrandrError> {
                     is_primary: out.is_primary,
                     crtc: out.crtc,
                     enabled: out.current_mode.is_some(),
-                    rotation: res
-                        .crtc(&mut xhandle, out.crtc.unwrap())
-                        .unwrap()
-                        .rotation
-                        .into(),
+                    rotation: focused_crtc.rotation.into(),
                     name: out.name.clone(),
                     connected: out.connected,
-                    modes: out
-                        .modes
+                    modes: mode_from_list(modes.clone(), &out.modes),
+                    preferred_modes: mode_from_list(modes.clone(), &out.preferred_modes),
+                    current_mode: modes
                         .iter()
-                        .map(|mode_id| res.mode(*mode_id).unwrap())
-                        .collect(),
-                    preferred_modes: out
-                        .preferred_modes
-                        .iter()
-                        .map(|mode_id| res.mode(*mode_id).unwrap())
-                        .collect(),
-                    current_mode: res.mode(out.current_mode.unwrap()).unwrap(),
+                        .find(|mode| mode.xid == out.current_mode.unwrap())
+                        .unwrap()
+                        .clone(),
                 }],
             };
         })
         .collect();
+    fn mode_from_list(modes: Vec<Mode>, mode_list: &Vec<u64>) -> Vec<Mode> {
+        return modes
+            .into_iter()
+            .filter(|mode| mode_list.contains(&mode.xid))
+            .collect();
+    }
     // xhandle.set_rotation(output, rotation)
     // let test = ScreenResources::mode(xhandle);
     // println!("{:#?}", test.join("\n NEW \n"));
@@ -93,7 +98,10 @@ async fn get_monitors() -> Result<Vec<FrontendMonitor>, XrandrError> {
         .iter()
         .filter(|&out| out.connected && out.current_mode.is_none())
         .map(|out| {
-            let preferred_mode = res.mode(out.preferred_modes[0]).unwrap();
+            let preferred_mode = modes
+                .iter()
+                .find(|mode| mode.xid == out.preferred_modes[0])
+                .unwrap();
             FrontendMonitor {
                 name: out.name.clone(),
                 is_primary: false,
@@ -109,17 +117,9 @@ async fn get_monitors() -> Result<Vec<FrontendMonitor>, XrandrError> {
                     rotation: Rotation::Normal,
                     name: out.name.clone(),
                     connected: out.connected,
-                    modes: out
-                        .modes
-                        .iter()
-                        .map(|mode_id| res.mode(*mode_id).unwrap())
-                        .collect(),
-                    preferred_modes: out
-                        .preferred_modes
-                        .iter()
-                        .map(|mode_id| res.mode(*mode_id).unwrap())
-                        .collect(),
-                    current_mode: res.mode(out.preferred_modes[0]).unwrap(),
+                    modes: mode_from_list(modes.clone(), &out.modes),
+                    preferred_modes: mode_from_list(modes.clone(), &out.preferred_modes),
+                    current_mode: preferred_mode.clone(),
                 }],
             }
         })
@@ -167,7 +167,7 @@ async fn set_enabled(xid: u64, enabled: bool) -> Result<u64, XrandrError> {
     //setting up vars
     let mut xhandle = XHandle::open()?;
     let res = ScreenResources::new(&mut xhandle)?;
-    let focused_output = res.output(&mut xhandle, xid, &res)?;
+    let focused_output = res.output(&mut xhandle, xid, None, &res)?;
     //making the change
     let mut new_crtc = 0;
     if enabled {
@@ -261,10 +261,12 @@ struct MiniMonitor {
 #[tauri::command]
 async fn quick_apply(monitors: Vec<MiniMonitor>) -> Result<Vec<Option<u64>>, XrandrError> {
     let mut xhandle = XHandle::open()?;
-    let mut crtcs: Vec<Crtc> = Vec::new();
+    let mut crtcs_changed: Vec<Crtc> = Vec::new();
     let mut crtc_ids: Vec<Option<u64>> = Vec::new();
     let res = ScreenResources::new(&mut xhandle).unwrap();
-    let outputs = res.outputs(&mut xhandle, &res)?;
+    let crtcs = res.crtcs(&mut xhandle)?;
+
+    let outputs = res.outputs(&mut xhandle, Some(&crtcs), &res)?;
     for current_monitor in monitors {
         let current_output = outputs
             .iter()
@@ -275,7 +277,11 @@ async fn quick_apply(monitors: Vec<MiniMonitor>) -> Result<Vec<Option<u64>>, Xra
             //enable
             if current_output.current_mode.is_some() && current_output.crtc.is_some() {
                 //crtc  was already enabled
-                crtc = res.crtc(&mut xhandle, current_output.crtc.unwrap())?;
+                crtc = crtcs
+                    .iter()
+                    .find(|crt| crt.xid == current_output.crtc.unwrap())
+                    .unwrap()
+                    .clone();
             } else {
                 //crtc needs to be enabled
                 crtc = xhandle.find_available_crtc(&current_output, &res)?;
@@ -292,22 +298,22 @@ async fn quick_apply(monitors: Vec<MiniMonitor>) -> Result<Vec<Option<u64>>, Xra
             crtc.rotation = current_monitor.rotation;
             //finalize
             crtc_ids.push(Some(crtc.xid));
-            crtcs.push(crtc);
+            crtcs_changed.push(crtc);
         } else {
             //Disable
             if let Some(crtc_id) = current_output.crtc {
-                let mut crtc = res.crtc(&mut xhandle, crtc_id)?;
+                let mut crtc = crtcs.iter().find(|crt| crt.xid == crtc_id).unwrap().clone();
                 crtc.x = 0;
                 crtc.y = 0;
                 crtc.mode = 0;
                 crtc.rotation = Rotation::Normal;
                 crtc.outputs.clear();
-                crtcs.push(crtc);
+                crtcs_changed.push(crtc);
             }
             crtc_ids.push(None);
         }
     }
-    xhandle.apply_new_crtcs(&mut crtcs, &res)?;
+    xhandle.apply_new_crtcs(&mut crtcs_changed, &res)?;
     Ok(crtc_ids)
 }
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -327,4 +333,26 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+#[cfg(test)]
+mod tests {
+    use std::time::Instant;
+
+    use super::*;
+
+    fn handle() -> XHandle {
+        XHandle::open().unwrap()
+    }
+
+    #[tokio::test]
+    async fn speed_test_for_outputs() {
+        let start = Instant::now();
+        let monitors = get_monitors().await.unwrap();
+        println!("Time taken: {:#?}", start.elapsed())
+    }
+
+    // #[test]
+    // fn can_debug_format_monitors() {
+    //     format!("{:#?}", handle().monitors().unwrap());
+    // }
 }

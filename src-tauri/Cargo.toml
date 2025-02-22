@@ -23,6 +23,8 @@ tauri-plugin-opener = "2"
 xrandr = { version = "^0", path = "./xrandr" }
 serde = { workspace = true }
 serde_json = { workspace = true }
+tokio = { version ="1.43.0", features = ["macros"] }
+tokio-macros = "2.5.0"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }

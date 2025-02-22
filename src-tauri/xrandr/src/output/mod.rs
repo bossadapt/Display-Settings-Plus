@@ -1,7 +1,7 @@
 pub mod property;
 
 use crate::screen_resources::ScreenResourcesHandle;
-use crate::{ScreenResources, XHandle, XrandrError};
+use crate::{Crtc, Mode, ScreenResources, XHandle, XrandrError};
 use indexmap::IndexMap;
 use property::{Property, Value};
 use std::os::raw::c_int;
@@ -75,10 +75,20 @@ impl Output {
     pub(crate) fn from_xid(
         handle: &mut XHandle,
         xid: u64,
+        crtcs_vec: Option<&Vec<Crtc>>,
         res: &ScreenResources,
     ) -> Result<Self, XrandrError> {
         let output_info = OutputHandle::new(handle, xid)?;
-
+        let crtcs_vec = match crtcs_vec {
+            Some(crtcs) => crtcs.clone(),
+            None => {
+                let mut output: Vec<Crtc> = Vec::new();
+                if let Ok(crtc_found) = res.crtc(handle, xid) {
+                    output.push(crtc_found);
+                }
+                output
+            }
+        };
         let xrandr::XRROutputInfo {
             crtc,
             ncrtc,
@@ -111,7 +121,16 @@ impl Output {
 
             let crtc_id = if *crtc == 0 { None } else { Some(*crtc) };
 
-            let curr_crtc = res.crtc(handle, *crtc).ok();
+            let curr_crtc = match crtc_id {
+                Some(crtc_id) => Some(
+                    crtcs_vec
+                        .iter()
+                        .find(|crtc| crtc.xid == crtc_id)
+                        .unwrap()
+                        .clone(),
+                ),
+                _ => None,
+            };
 
             let current_mode = curr_crtc
                 .and_then(|crtc_info| modes.iter().copied().find(|&m| m == crtc_info.mode));
@@ -195,7 +214,7 @@ impl Output {
     ) -> Result<Vec<Output>, XrandrError> {
         slice::from_raw_parts(data, len as usize)
             .iter()
-            .map(|xid| Output::from_xid(handle, *xid, &res))
+            .map(|xid| Output::from_xid(handle, *xid, None, res))
             .collect()
     }
 }

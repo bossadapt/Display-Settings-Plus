@@ -110,11 +110,12 @@ impl ScreenResources {
     pub fn outputs(
         &self,
         handle: &mut XHandle,
+        crtcs: Option<&Vec<Crtc>>,
         res: &ScreenResources,
     ) -> Result<Vec<Output>, XrandrError> {
         self.outputs
             .iter()
-            .map(|xid| Output::from_xid(handle, *xid, res))
+            .map(|xid| Output::from_xid(handle, *xid, crtcs, res))
             .collect()
     }
 
@@ -134,12 +135,10 @@ impl ScreenResources {
         &self,
         handle: &mut XHandle,
         xid: XId,
+        crtcs: Option<&Vec<Crtc>>,
         res: &ScreenResources,
     ) -> Result<Output, XrandrError> {
-        self.outputs(handle, &res)?
-            .into_iter()
-            .find(|o| o.xid == xid)
-            .ok_or(XrandrError::GetOutputInfo(xid))
+        Output::from_xid(handle, xid, crtcs, res)
     }
 
     /// Gets information on all crtcs
@@ -188,10 +187,7 @@ impl ScreenResources {
     /// ```
     ///
     pub fn crtc(&self, handle: &mut XHandle, xid: XId) -> Result<Crtc, XrandrError> {
-        self.crtcs(handle)?
-            .into_iter()
-            .find(|c| c.xid == xid)
-            .ok_or(XrandrError::GetCrtc(xid))
+        Crtc::from_xid(handle, xid)
     }
 
     /// Gets information on all crtcs
