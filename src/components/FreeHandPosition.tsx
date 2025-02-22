@@ -139,40 +139,25 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         return monitorContainer;
     }
     function onScreenDragStart(eve: FederatedPointerEvent) {
-        console.log("dragging called");
         screenDragActive.current = true;
         previousScreenOffset.current.x = eve.globalX;
         previousScreenOffset.current.y = eve.globalY;
         app.current!.stage.on('pointermove', onScreenMove);
     }
     function onScreenMove(eve: FederatedPointerEvent) {
-        console.log("on screen")
-        let cursorPosition = app.current!.renderer.events.pointer;
         let difX = eve.globalX - previousScreenOffset.current.x;
         let difY = eve.globalY - previousScreenOffset.current.y;
-        console.log("globalx:", eve.globalX);
-        console.log("globaly:", eve.globalY);
-        console.log("cursorx:", cursorPosition.x);
-        console.log("cursory:", cursorPosition.y);
-        console.log("difx:", difX);
-        console.log("dify:", difY);
-        console.log("Previous1  dragx:", previousScreenOffset.current.x);
-        console.log("Previous1  dragy:", previousScreenOffset.current.y);
         previousScreenOffset.current.x = eve.globalX;
         previousScreenOffset.current.y = eve.globalY;
-        console.log("Previous2  dragx:", previousScreenOffset.current.x);
-        console.log("Previous2  dragy:", previousScreenOffset.current.y);
         screenDragOffsetTotal.current.x += difX;
         screenDragOffsetTotal.current.y += difY;
         app.current!.stage.children.forEach((child) => {
-            console.log("child changed");
             child.x += difX;
             child.y += difY;
         });
 
     }
     function onScreenDragEnd() {
-        console.log("drag screen end")
         if (app.current) {
             app.current!.stage.off('pointermove', onScreenMove);
         }
@@ -358,8 +343,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
     return (
         <div style={{ display: 'flex', flexDirection: "row" }}>
             <p style={{ width: "20vw", height: "50vh" }}><b>Controls:</b> <br /><br />
-                <b>Move Monitors:</b> Hold Left Click <br /><br />
-                <b>Pan:</b> Hold Right Click</p>
+                <b>Move Monitors:</b> Hold Left Click + Drag<br /><br />
+                <b>Move Camera:</b> Hold Right Click + Drag</p>
             <canvas style={{ marginLeft: "auto", marginRight: "auto", display: 'block', width: "60vw", height: "60vh" }} ref={canvas => {
                 if (didInit.current) {
                     return;

@@ -123,7 +123,7 @@ impl XHandle {
 
     // TODO: this seems to be more complicated in xrandr.c
     // Finds an available Crtc for a given (disabled) output
-    fn find_available_crtc(&mut self, o: &Output) -> Result<Crtc, XrandrError> {
+    pub fn find_available_crtc(&mut self, o: &Output) -> Result<Crtc, XrandrError> {
         let res = ScreenResources::new(self)?;
         let crtcs = res.crtcs(self)?;
 
@@ -339,7 +339,7 @@ impl XHandle {
     /// * `changes`
     ///     Altered crtcs. Must be mutable because of crct.apply() calls.
     ///
-    fn apply_new_crtcs(&mut self, changed: &mut [Crtc]) -> Result<(), XrandrError> {
+    pub fn apply_new_crtcs(&mut self, changed: &mut [Crtc]) -> Result<(), XrandrError> {
         let res = ScreenResources::new(self)?;
         let old_crtcs = res.enabled_crtcs(self)?;
 

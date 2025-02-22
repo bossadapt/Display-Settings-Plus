@@ -49,7 +49,6 @@ export interface Mode {
 export interface FrontendMonitor {
     name: string;
     isPrimary: boolean;
-    isAutomatic: boolean;
     x: number;
     y: number;
     widthPx: number;
@@ -59,17 +58,24 @@ export interface FrontendMonitor {
 
 export interface FrontendOutput {
     xid: number;
-    timestamp: number;
     isPrimary: boolean;
     enabled: boolean;
     crtc?: number;
     rotation: Rotation;
     name: string;
     connected: boolean;
-    subpixelOrder: number;
-    crtcs: number[];
-    clones: number[];
     modes: Mode[];
     preferredModes: Mode[];
     currentMode: Mode;
+}
+
+export interface MiniMonitor {
+    output_xid: number,
+    enabled: boolean,
+    rotation: Rotation,
+    mode_xid: number,
+    mode_height: number,
+    mode_width: number,
+    x: string,
+    y: string,
 }

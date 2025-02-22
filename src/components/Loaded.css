@@ -6,6 +6,11 @@
   .react-select{
 height: 150px;
 }
+.majorButtons{
+  color: hotpink;
+  font-size: 15px;
+  border-color: white;
+}
 /* CSS from button people https://getcssscan.com/css-buttons-examples */
 button {
   appearance: none;

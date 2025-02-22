@@ -44,8 +44,36 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
     useEffect(() => {
         applyChangesRef.current = applyAllChanges;
     }, []);
-    const failList = useRef<FailInfos[]>([]);
-    const [showPopup, setShowPopup] = useState(false);
+    const failList = useRef<FailInfos[]>([{
+        monitorIdx: 0,
+        settingName: "positions",
+        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
+    }, {
+        monitorIdx: 0,
+        settingName: "positions",
+        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
+    }, {
+        monitorIdx: 0,
+        settingName: "positions",
+        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
+    }, {
+        monitorIdx: 0,
+        settingName: "positions",
+        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
+    }, {
+        monitorIdx: 0,
+        settingName: "positions",
+        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
+    }, {
+        monitorIdx: 0,
+        settingName: "positions",
+        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
+    }, {
+        monitorIdx: 0,
+        settingName: "positions",
+        reason: "invalid args 'y' for command 'set_position' invalid type:floating point '0.99999999999999', expected i32"
+    }]);
+    const [showPopup, setShowPopup] = useState(true);
     const [monitorStates, setMonitorStates] = useState<MonitorApplyState[]>(new Array(initialMonitors.current.length).fill(
         { ...defaultMonitorApplyState }
     ));
@@ -53,7 +81,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
     const [undoButtonText, setUndoButtonText] = useState("...");
     const [nextButtonText, setNextButtonText] = useState("...");
     const [buttonsEnabled, setButtonsEnabled] = useState(false);
-    const [onErrorScreen, setOnErrorScreen] = useState(false);
+    const [onErrorScreen, setOnErrorScreen] = useState(true);
     const [monitorsBeingChangedState, setMonitorsBeingChangedState] = useState<number[]>([]);
     const undoButtonPressed = useRef(false);
     const nextButtonPressed = useRef(false);
@@ -61,7 +89,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
     //TODO: possibly disable the scrolling happening in the background
     async function applyAllChanges(customMonitors: FrontendMonitor[], monitorsBeingApplied: number[]) {
         setNextButtonText("...");
-        setOnErrorScreen(false);
+        setOnErrorScreen(true);
         failList.current = [];
         console.log("Pop up showing");
         setMonitorStates(new Array(initialMonitors.current.length).fill(
@@ -215,7 +243,6 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
                 rotation: newMonitors.current[focusedMonitorIdx].outputs[0].rotation
             }).then(async () => {
                 if (!forced && await promptUserToUndo()) {
-                    //TODO: ensure these functions are non null before starting popup
                     newMonitors.current = [...resetFunctions.current.rotation!(newMonitors.current, focusedMonitorIdx)];
 
                     await invoke("set_rotation", {
@@ -237,7 +264,6 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
         return output;
     }
     async function applyPosition(focusedMonitorIdx: number, newMonitors: MutableRefObject<FrontendMonitor[]>, forced: boolean): Promise<Attempt> {
-        //TODO: ensure that freehand position comes before any of the other screens
         let output: Attempt = { state: AttemptState.Unchanged, reason: "" };
         console.log("position function called");
         if (forced || !(newMonitors.current[focusedMonitorIdx].x === initialMonitors.current[focusedMonitorIdx].x
@@ -246,8 +272,8 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
 
             await invoke("set_position", {
                 outputCrtc: newMonitors.current[focusedMonitorIdx].outputs[0].crtc,
-                x: newMonitors.current[focusedMonitorIdx].x,
-                y: newMonitors.current[focusedMonitorIdx].y
+                x: newMonitors.current[focusedMonitorIdx].x.toFixed(0),
+                y: newMonitors.current[focusedMonitorIdx].y.toFixed(0)
             }).then(async () => {
                 if (!forced && await promptUserToUndo()) {
                     console.log("internals of redo func called")
@@ -255,8 +281,8 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
                     console.log("output:", newMonitors.current[focusedMonitorIdx].outputs[0].crtc, ",x:", newMonitors.current[focusedMonitorIdx].x, ",y:", newMonitors.current[focusedMonitorIdx].y)
                     await invoke("set_position", {
                         outputCrtc: newMonitors.current[focusedMonitorIdx].outputs[0].crtc,
-                        x: initialMonitors.current[focusedMonitorIdx].x,
-                        y: initialMonitors.current[focusedMonitorIdx].y
+                        x: initialMonitors.current[focusedMonitorIdx].x.toFixed(0),
+                        y: initialMonitors.current[focusedMonitorIdx].y.toFixed(0)
                     })
                     output = { state: AttemptState.Undone, reason: "" };
                 } else {
@@ -272,7 +298,6 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
         }
         return output;
     }
-    //TODO: apply mode done with all of the previous changes causes the monitor to be disabled by xrander without any warning
     async function applyMode(focusedMonitorIdx: number, newMonitors: MutableRefObject<FrontendMonitor[]>, forced: boolean): Promise<Attempt> {
         let output: Attempt = { state: AttemptState.Unchanged, reason: "" };
         let oldMode = initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!;
@@ -336,25 +361,18 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
         <div className="popup" style={{ display: showPopup ? "block" : "none" }}>
             <div className="popupContentsContainer">
                 <h1 className="popupTitle">Applying Errors</h1>
-                <table className="errorTable">
-                    <thead>
-                        <tr>
-                            <th>Monitor</th>
-                            <th>Setting</th>
-                            <th>Reason</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {failList.current.map((err) => (
-                            <tr key={err.monitorIdx + err.settingName}>
-                                <td>{initialMonitors.current[err.monitorIdx].name}</td>
-                                <td>{err.settingName}</td>
-                                <td>{err.reason}</td>
-                            </tr>
+                <div className="errorTableContainer">
+                    <table className="errorTable">
+                        <tbody>
+                            {failList.current.map((err) => (
+                                <tr key={err.monitorIdx + err.settingName}>
+                                    <td>Failed to apply {err.settingName} on monitor {initialMonitors.current[err.monitorIdx].name} because {err.reason}</td>
+                                </tr>
 
-                        ))}
-                    </tbody>
-                </table>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
                 <button className="finishButton" onClick={() => { setShowPopup(false) }}>Finish</button>
             </div>
         </div>

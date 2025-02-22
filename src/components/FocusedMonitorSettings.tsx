@@ -237,7 +237,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                     <div className="toggle"></div>
                 </label>
             </div>
-            <button className="resetButton" disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} onClick={resetAllFocused}>Reset<br></br>Monitor</button>
+            <button style={{ width: "95px" }} className="resetButton" disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} onClick={resetAllFocused}>Reset<br></br>Monitor</button>
 
         </div>
         <div className="settingsContainer">
@@ -245,7 +245,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                 <h2>Position:</h2>
             </div>
             <div className="settingsEditorContainer">
-                <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "-5px" }}>X:</h2>
+                <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "-10px" }}>X:</h2>
                 <input disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} type="number" value={customMonitors[focusedMonitorIdx].x} onChange={(eve) => setPositionX(Number(eve.target.value))} />
                 <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "10px" }}>Y:</h2>
                 <input disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} type="number" value={customMonitors[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
