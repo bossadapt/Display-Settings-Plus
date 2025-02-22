@@ -1,4 +1,4 @@
-import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, Renderer, BitmapText } from 'pixi.js';
+import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, BitmapText } from 'pixi.js';
 import { useState, useRef, Dispatch, SetStateAction, MutableRefObject, useEffect } from 'react';
 import { FrontendMonitor, point as Point, Rotation } from '../globalValues';
 

@@ -1,7 +1,6 @@
 import { Dispatch, MutableRefObject, SetStateAction, useEffect } from "react";
-import { customSelectTheme, FrontendMonitor, Mode, point, Rotation } from "../globalValues";
+import { customSelectTheme, FrontendMonitor, Mode, Rotation } from "../globalValues";
 import "./FocusedMonitorSettings.css";
-import { Application, Renderer } from "pixi.js";
 import Select from "react-select";
 import { focusedSettingsFunctions } from "./LoadedScreen";
 interface FocusedMonitorSettingsProps {

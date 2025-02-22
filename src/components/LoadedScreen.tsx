@@ -1,6 +1,6 @@
 import { Dispatch, MutableRefObject, SetStateAction, useRef, useState } from "react";
 import Select from 'react-select';
-import { customSelectTheme, FrontendMonitor, MiniMonitor, point, Rotation } from "../globalValues";
+import { customSelectTheme, FrontendMonitor, MiniMonitor, Rotation } from "../globalValues";
 import FreeHandPosition from "./FreeHandPosition";
 import './Loaded.css';
 import FocusedMonitorSettings from "./FocusedMonitorSettings";

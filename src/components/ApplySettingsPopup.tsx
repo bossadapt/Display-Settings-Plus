@@ -1,4 +1,4 @@
-import { Dispatch, MutableRefObject, SetStateAction, useEffect, useRef, useState } from "react";
+import { MutableRefObject, useEffect, useRef, useState } from "react";
 import { FrontendMonitor, Rotation } from "../globalValues";
 import { invoke } from "@tauri-apps/api/core";
 import "./ApplySettingsPopup.css"
@@ -45,7 +45,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
         applyChangesRef.current = applyAllChanges;
     }, []);
     const failList = useRef<FailInfos[]>([]);
-    const [showPopup, setShowPopup] = useState(true);
+    const [showPopup, setShowPopup] = useState(false);
     const [monitorStates, setMonitorStates] = useState<MonitorApplyState[]>(new Array(initialMonitors.current.length).fill(
         { ...defaultMonitorApplyState }
     ));
@@ -74,7 +74,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({ applyCha
         }
         monitorsBeingApplied.sort((m1, m2) => instancedMonitors.current[m1].x - instancedMonitors.current[m2].x);
         setMonitorsBeingChangedState(monitorsBeingApplied);
-        setShowPopup(false);
+        setShowPopup(true);
         for (let i = 0; i < monitorsBeingApplied.length; i++) {
             //set new monitor to in progress along with enable
             setMonitorStates((prevMon) => (prevMon.map((mon, idx) => idx === monitorsBeingApplied[i] ? { ...mon, overall: AttemptState.InProgress, enabled: AttemptState.InProgress } : mon)));
