@@ -1,15 +1,20 @@
 use std::{
     fs::File,
     io::{self, BufWriter, ErrorKind},
+    path,
 };
 
 use serde::{Deserialize, Serialize};
+use tokio::fs::create_dir_all;
+use xcap::{image::ImageError, XCapError};
 use xrandr::{Crtc, Mode, Rotation, ScreenResources, XHandle, XId, XrandrError};
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 //added this to serialize without editing the library
 #[derive(Serialize, Deserialize, Debug)]
 struct FrontendMonitor {
     name: String,
+    #[serde(rename = "imgSrc")]
+    img_src: Option<String>,
     #[serde(rename = "isPrimary")]
     is_primary: bool,
     x: i32,
@@ -39,15 +44,56 @@ struct FrontendOutput {
     #[serde(rename = "currentMode")]
     current_mode: Mode,
 }
+
 //dropping properties because its too extra for someone editing settings via gui to care
+fn mode_from_list(modes: Vec<Mode>, mode_list: &Vec<u64>) -> Vec<Mode> {
+    return modes
+        .into_iter()
+        .filter(|mode| mode_list.contains(&mode.xid))
+        .collect();
+}
+#[derive(Serialize, Debug)]
+enum GenericError {
+    Xcap(String),
+    Xrandr(XrandrError),
+    Io(String),
+}
+
+impl From<XrandrError> for GenericError {
+    fn from(e: XrandrError) -> Self {
+        GenericError::Xrandr(e)
+    }
+}
+impl From<XCapError> for GenericError {
+    fn from(e: XCapError) -> Self {
+        GenericError::Xcap(e.to_string())
+    }
+}
+impl From<ImageError> for GenericError {
+    fn from(e: ImageError) -> Self {
+        GenericError::Xcap(e.to_string())
+    }
+}
+impl From<io::Error> for GenericError {
+    fn from(e: io::Error) -> Self {
+        GenericError::Io(e.to_string())
+    }
+}
+use lazy_static::lazy_static;
+lazy_static! {
+    static ref app_directory_path: path::PathBuf = directories::BaseDirs::new()
+        .unwrap()
+        .config_dir()
+        .join("display_settings_plus");
+}
 #[tauri::command]
-async fn get_monitors() -> Result<Vec<FrontendMonitor>, XrandrError> {
+async fn get_monitors() -> Result<(Vec<FrontendMonitor>, Vec<String>), GenericError> {
+    create_dir_all(app_directory_path.join("screenshots")).await?;
     let mut xhandle = XHandle::open()?;
     let res = ScreenResources::new(&mut xhandle)?;
     let crtcs = res.crtcs(&mut xhandle)?;
     let modes = res.modes();
     let outputs = res.outputs(&mut xhandle, Some(&crtcs), &res)?;
-    //TODO: crtcs and modes(for peffered and modes) should be called and picked apart
     let enabled_monitors: Vec<FrontendMonitor> = outputs
         .iter()
         .filter(|&out| out.connected && out.current_mode.is_some())
@@ -59,6 +105,7 @@ async fn get_monitors() -> Result<Vec<FrontendMonitor>, XrandrError> {
                 .clone();
             return FrontendMonitor {
                 name: out.name.clone(),
+                img_src: None,
                 is_primary: out.is_primary,
                 x: focused_crtc.x,
                 y: focused_crtc.y,
@@ -83,16 +130,8 @@ async fn get_monitors() -> Result<Vec<FrontendMonitor>, XrandrError> {
             };
         })
         .collect();
-    fn mode_from_list(modes: Vec<Mode>, mode_list: &Vec<u64>) -> Vec<Mode> {
-        return modes
-            .into_iter()
-            .filter(|mode| mode_list.contains(&mode.xid))
-            .collect();
-    }
-    // xhandle.set_rotation(output, rotation)
-    // let test = ScreenResources::mode(xhandle);
-    // println!("{:#?}", test.join("\n NEW \n"));
-    //println!("{:#?}", monitors[0].outputs[0].properties);
+
+    //handle inactive screens
     //
     let disabled_monitors: Vec<FrontendMonitor> = outputs
         .iter()
@@ -104,6 +143,7 @@ async fn get_monitors() -> Result<Vec<FrontendMonitor>, XrandrError> {
                 .unwrap();
             FrontendMonitor {
                 name: out.name.clone(),
+                img_src: None,
                 is_primary: false,
                 x: 0,
                 y: 0,
@@ -124,16 +164,39 @@ async fn get_monitors() -> Result<Vec<FrontendMonitor>, XrandrError> {
             }
         })
         .collect::<Vec<FrontendMonitor>>();
-    let mut output: Vec<FrontendMonitor> = Vec::new();
+
+    let mut connected_monitors: Vec<FrontendMonitor> = Vec::new();
     for monitor in enabled_monitors {
-        output.push(monitor);
+        connected_monitors.push(monitor);
     }
     for monitor in disabled_monitors {
-        output.push(monitor);
+        connected_monitors.push(monitor);
     }
-    Ok(output)
+    for (name, path) in take_screenshots()? {
+        connected_monitors
+            .iter_mut()
+            .find(|mon| mon.name == name)
+            .unwrap()
+            .img_src = Some(path);
+    }
+
+    Ok((
+        connected_monitors,
+        outputs.iter().map(|out| out.name.clone()).collect(),
+    ))
 }
 
+fn take_screenshots() -> Result<Vec<(String, String)>, ImageError> {
+    let screenshot_monitors = xcap::Monitor::all().unwrap();
+    let mut paths: Vec<(String, String)> = Vec::new();
+    for monitor in screenshot_monitors {
+        let cur_name = monitor.name();
+        let file_name = app_directory_path.join(format!("screenshots/{cur_name}.png"));
+        paths.push((cur_name.to_owned(), format!("screenshots/{cur_name}.png")));
+        monitor.capture_image().unwrap().save(file_name)?;
+    }
+    Ok(paths)
+}
 #[tauri::command]
 async fn set_primary(xid: u64) -> Result<(), XrandrError> {
     let mut xhandle = XHandle::open()?;
@@ -195,7 +258,7 @@ async fn set_mode(
 async fn get_presets() -> Result<Vec<Vec<FrontendMonitor>>, String> {
     let mut presets: Vec<Vec<FrontendMonitor>> = Vec::new();
     for i in 0..5 {
-        let file_name = format!("./Preset{i}.json");
+        let file_name = app_directory_path.join(format!("Presets/Preset{i}.json"));
         let cur_file = File::open(&file_name);
         match cur_file {
             Ok(file) => {
@@ -230,7 +293,7 @@ async fn get_presets() -> Result<Vec<Vec<FrontendMonitor>>, String> {
 }
 #[tauri::command]
 async fn overwrite_preset(idx: i32, new_preset: Vec<FrontendMonitor>) -> Result<(), String> {
-    let file_name = format!("./Preset{idx}.json");
+    let file_name = app_directory_path.join(format!("Presets/Preset{idx}.json"));
     let new_file = File::create(file_name);
     if let Ok(new_file) = new_file {
         let mut writer = BufWriter::new(new_file);
@@ -316,6 +379,8 @@ async fn quick_apply(monitors: Vec<MiniMonitor>) -> Result<Vec<Option<u64>>, Xra
     xhandle.apply_new_crtcs(&mut crtcs_changed, &res)?;
     Ok(crtc_ids)
 }
+//TODO: add a script maker
+//https://askubuntu.com/questions/63681/how-can-i-make-xrandr-customization-permanent
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -334,6 +399,7 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+//TODO: add a way to generate
 #[cfg(test)]
 mod tests {
     use std::time::Instant;

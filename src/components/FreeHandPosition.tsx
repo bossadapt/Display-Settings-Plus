@@ -1,7 +1,9 @@
-import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, BitmapText } from 'pixi.js';
+import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, BitmapText, Sprite, Assets } from 'pixi.js';
 import { useState, useRef, Dispatch, SetStateAction, MutableRefObject, useEffect } from 'react';
 import { FrontendMonitor, point as Point, Rotation } from '../globalValues';
-
+import { convertFileSrc } from '@tauri-apps/api/core';
+import { appDataDir, join } from '@tauri-apps/api/path';
+const appDataDirPath = await appDataDir();
 interface FreeHandPositionProps {
     initialMonitors: MutableRefObject<FrontendMonitor[]>;
     customMonitors: FrontendMonitor[];
@@ -30,7 +32,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         await appLocal.init({ background: '#1a171f', canvas: canvasRef });
         //createGrid(appLocal);
         for (let i = 0; i < customMonitors.length; i++) {
-            appLocal.stage.addChild(createMonitorContainer(customMonitors[i]));
+            appLocal.stage.addChild(await createMonitorContainer(customMonitors[i]));
         }
 
         appLocal.resizeTo = window;
@@ -59,7 +61,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             )
         );
     }
-    function rerenderMonitors(newMonitors: FrontendMonitor[]) {
+    async function rerenderMonitors(newMonitors: FrontendMonitor[]) {
         if (app.current) {
             console.log("rerender called");
             //deletion
@@ -67,14 +69,14 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             //rebuilding
             console.log("children:", app.current!.stage.children);
             for (let i = 0; i < newMonitors.length; i++) {
-                app.current!.stage.addChild(createMonitorContainer(newMonitors[i]));
+                app.current!.stage.addChild(await createMonitorContainer(newMonitors[i]));
             }
 
         } else {
             console.log("app not built yet, unable to rerender");
         }
     }
-    function createMonitorContainer(monitor: FrontendMonitor): Container {
+    async function createMonitorContainer(monitor: FrontendMonitor): Promise<Container> {
         // Container
         const monitorContainer = new Container();
         monitorContainer.isRenderGroup = true;
@@ -82,8 +84,10 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         monitorContainer.y = monitor.y / monitorScale + screenDragOffsetTotal.current.y;
         monitorContainer.label = monitor.name;
         monitorContainer.cursor = 'pointer';
+        //TODO: have tauri push images to links
         const monitorGraphic = new Graphics();
         const monitorText = new BitmapText();
+
         // handles if the monitor is disabled(should not be seen and interactive)
         if (monitor.outputs[0].enabled) {
             monitorContainer.eventMode = 'static';
@@ -107,6 +111,15 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         monitorGraphic.fillStyle = 'black';
         monitorGraphic.fill();
         monitorGraphic.stroke({ width: 2, color: 'pink' });
+        //Screenshot
+        let monitorScreenshotSprite: Sprite | undefined;
+        if (monitor.imgSrc) {
+            let path = convertFileSrc(await join(appDataDirPath, monitor.imgSrc));
+            let texture = await Assets.load(path);
+            monitorScreenshotSprite = new Sprite(texture);
+            monitorScreenshotSprite.setSize((monitorWidth / monitorScale) - 2, (monitorHeight / monitorScale) - 2);
+        }
+
         //text
         monitorText.text = monitor.name;
         monitorText.tint = 'hotpink';
@@ -133,7 +146,10 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         }
         // Setup events for mouse + touch using the pointer events
         monitorContainer.on('mousedown', onDragStart, monitorGraphic);
-        monitorContainer.addChild(monitorGraphic, monitorText);
+        monitorContainer.addChild(monitorGraphic);
+        if (monitorScreenshotSprite) {
+            monitorContainer.addChild(monitorScreenshotSprite)
+        }
         monitorContainer.width = monitorWidth / monitorScale;
         monitorContainer.height = monitorHeight / monitorScale;
         return monitorContainer;

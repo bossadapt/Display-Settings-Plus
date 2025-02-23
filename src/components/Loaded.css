@@ -9,6 +9,7 @@ height: 150px;
 .majorButtons{
   color: hotpink;
   font-size: 15px;
+  height: 52px;
   border-color: white;
 }
 /* CSS from button people https://getcssscan.com/css-buttons-examples */

@@ -18,7 +18,10 @@
       }
     ],
     "security": {
-      "csp": null
+      "assetProtocol": {
+        "enable": true,
+        "scope":  ["$HOME/.config/display_settings_plus/screenshots/**"]
+      }
     }
   },
   "bundle": {

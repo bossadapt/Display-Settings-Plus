@@ -13,6 +13,7 @@ interface LoadedProps {
   initialMonitors: MutableRefObject<FrontendMonitor[]>;
   presets: MutableRefObject<FrontendMonitor[][]>;
   setCustMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
+  outputNames: MutableRefObject<String[]>;
 
 }
 export interface focusedSettingsFunctions {
@@ -22,7 +23,7 @@ export interface focusedSettingsFunctions {
   mode: ((monitors: FrontendMonitor[], focusedMonitorIdx: number) => FrontendMonitor[]) | null;
   setCrtc: ((monitors: FrontendMonitor[], focusedMonitorIdx: number, newCrtc: number) => FrontendMonitor[]) | null;
 }
-export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customMonitors, initialMonitors, presets, setCustMonitors }) => {
+export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customMonitors, initialMonitors, presets, setCustMonitors, outputNames }) => {
   const [focusedMonitorIdx, setFocusedMonitorIdx] = useState(0);
   const [focusedPresetIdx, setFocusedPresetIdx] = useState(0);
   const resetFunctions = useRef<focusedSettingsFunctions>({ enable: null, position: null, rotation: null, mode: null, setCrtc: null });
@@ -151,12 +152,34 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
       minHeight: 52
     })
   };
+  function copyScript() {
+    setShowSimplePopUp(true);
+    setSimplePopUpReason("Creating Script");
+    let script: String = "xrandr"
+    for (let i = 0; i < outputNames.current.length; i++) {
+      let focusedMonitor = customMonitors.find((mon) => (mon.outputs[0].name === outputNames.current[i]));
+      console.log("focused monitor:");
+      console.log(outputNames.current[i]);
+      console.log(focusedMonitor);
+      if (focusedMonitor && focusedMonitor.outputs[0].enabled) {
+        script += " --output " + outputNames.current[i] +
+          " --mode " + focusedMonitor.outputs[0].currentMode.name +
+          " --rate " + focusedMonitor.outputs[0].currentMode.rate +
+          " --pos " + focusedMonitor.x + "x" + focusedMonitor.y +
+          " --rotate " + focusedMonitor.outputs[0].rotation.toLocaleLowerCase();
+      } else {
+        script += " --output " + outputNames.current[i] + " --off";
+      }
+      navigator.clipboard.writeText(script.toString());
+      setShowSimplePopUp(false);
+    }
+  }
   return (
-    //presets dropdown yoinked from https://react-select.com/home
     <div className="loadedMain">
       <div style={{ display: "flex", flexDirection: "row" }}>
         <Select styles={customStyles} onChange={(eve) => { eve ? setFocusedPreset(eve.value) : {} }} options={presetsOptions} value={presetsOptions[focusedPresetIdx]} theme={customSelectTheme}></Select>
         <button className="majorButtons" onClick={overwriteFocusedPreset}>Overwrite Preset</button>
+        <button className="majorButtons" onClick={copyScript}>Clipboard</button>
         <button className="majorButtons" style={{ marginLeft: "auto" }} onClick={resetAll}>Reset</button>
         <button className="majorButtons" onClick={() => { monitorRefreshRef.current() }}>Resync</button>
         <button className="majorButtons" onClick={massApply}>Mass Apply</button>

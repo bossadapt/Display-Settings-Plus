@@ -105,6 +105,11 @@ impl Output {
             ..
         } = unsafe { output_info.ptr.as_ref() };
         let connected = c_int::from(*connection) == xrandr::RR_Connected;
+        // Name processing
+        let name_b = unsafe { slice::from_raw_parts(*name as *const u8, *nameLen as usize) };
+
+        let name = String::from_utf8_lossy(name_b).to_string();
+        // let properties = Self::get_props(handle, xid)?;
         //There is no reason to pull information about monitors that are not connected
         if connected {
             let is_primary =
@@ -135,12 +140,6 @@ impl Output {
             let current_mode = curr_crtc
                 .and_then(|crtc_info| modes.iter().copied().find(|&m| m == crtc_info.mode));
 
-            // Name processing
-            let name_b = unsafe { slice::from_raw_parts(*name as *const u8, *nameLen as usize) };
-
-            let name = String::from_utf8_lossy(name_b).to_string();
-            // let properties = Self::get_props(handle, xid)?;
-
             let result = Self {
                 xid,
                 properties: Default::default(),
@@ -167,7 +166,7 @@ impl Output {
                 timestamp: CURRENT_TIME,
                 is_primary: false,
                 crtc: Default::default(),
-                name: Default::default(),
+                name,
                 mm_width: *mm_width,
                 mm_height: *mm_height,
                 connected,

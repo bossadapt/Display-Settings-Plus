@@ -48,6 +48,7 @@ export interface Mode {
 //These are more surface leveled versions of the xrandr versions
 export interface FrontendMonitor {
     name: string;
+    imgSrc?: string;
     isPrimary: boolean;
     x: number;
     y: number;

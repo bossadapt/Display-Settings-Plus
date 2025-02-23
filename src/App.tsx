@@ -10,6 +10,7 @@ function App() {
   const didInit = useRef(false);
   const refreshMonitorsRef = useRef<Function>(refreshMonitors);
   const initialMonitorsInfo = useRef<FrontendMonitor[]>([]);
+  const outputNames = useRef<String[]>([]);
   const presets = useRef<FrontendMonitor[][]>([]);
 
   //-1 for cases where there are no monitors
@@ -17,11 +18,6 @@ function App() {
   //grabbing monitors info every 5 seconds
 
   useEffect(() => {
-    // This code will run only once, after the initial render
-    // const interval = setInterval(() => {
-    //   getMonitors();
-    // }, 5000);
-    // return () => clearInterval(interval);
     if (didInit.current) {
       return;
     }
@@ -34,11 +30,13 @@ function App() {
     console.log("init called");
     initialMonitorsInfo.current = [];
     setCustomMonitorsInfo([]);
-    invoke<FrontendMonitor[]>("get_monitors", {}).then((res) => {
+    invoke<[FrontendMonitor[], String[]]>("get_monitors", {}).then((res) => {
       //res = handleRotations(res);
-      initialMonitorsInfo.current = [...res];
-      setCustomMonitorsInfo(res);
-      console.log(res);
+      outputNames.current = res[1];
+      console.log(res[1]);
+      initialMonitorsInfo.current = [...res[0]];
+      setCustomMonitorsInfo(res[0]);
+      console.log(res[0]);
     });
   }
   async function getPresets() {
@@ -49,16 +47,8 @@ function App() {
       console.error(err);
     });
   }
-  // function handleRotations(input: FrontendMonitor[]): FrontendMonitor[] {
-  //   //initial monitors true rotation is stored in the monitor instead of the mode but I'm undoing that to handle state slightly more cleanly
-  //   return input.map((curMon) =>
-  //   (curMon.outputs[0].rotation === Rotation.Left || curMon.outputs[0].rotation === Rotation.Right
-  //     ? { ...curMon, widthMm: curMon.heightMm, heightMm: curMon.widthMm, widthPx: curMon.heightPx, heightPx: curMon.widthPx, outputs: curMon.outputs.map((out, idx) => (idx === 0 ? { ...out, currentMode: { ...out.currentMode!, width: curMon.outputs[0].currentMode!.height, height: curMon.outputs[0].currentMode!.width } } : out)) }
-  //     : curMon)
-  //   );
-  // }
   return (
-    <div>{customMonitorsInfo.length != 0 ? <LoadedScreen presets={presets} monitorRefreshRef={refreshMonitorsRef} customMonitors={customMonitorsInfo} initialMonitors={initialMonitorsInfo} setCustMonitors={setCustomMonitorsInfo} /> : <LoadingScreen />}</div>
+    <div>{customMonitorsInfo.length != 0 ? <LoadedScreen outputNames={outputNames} presets={presets} monitorRefreshRef={refreshMonitorsRef} customMonitors={customMonitorsInfo} initialMonitors={initialMonitorsInfo} setCustMonitors={setCustomMonitorsInfo} /> : <LoadingScreen />}</div>
   );
 }
 
