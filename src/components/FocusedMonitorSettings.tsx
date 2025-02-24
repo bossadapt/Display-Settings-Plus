@@ -1,4 +1,4 @@
-import { Dispatch, MutableRefObject, SetStateAction, useEffect } from "react";
+import { Dispatch, MutableRefObject, SetStateAction, useEffect, useRef } from "react";
 import { customSelectTheme, FrontendMonitor, Mode, Rotation } from "../globalValues";
 import "./FocusedMonitorSettings.css";
 import Select from "react-select";
@@ -13,13 +13,13 @@ interface FocusedMonitorSettingsProps {
 }
 export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     { focusedMonitorIdx, customMonitors, initialMonitors, setMonitors, rerenderMonitorsContainerRef, resetFunctions }) => {
-
+    let lastStateWhenRerenderCalled = useRef<FrontendMonitor[]>([]);
     //if there are any size changes, then the monitors need to rerendered without affecting the order integrity or stretching
     //MANUAL ATTEMPT
     useEffect(() => {
-        console.log('rerender external called');
-        if (rerenderMonitorsContainerRef.current) {
+        if (rerenderMonitorsContainerRef.current && customMonitors !== lastStateWhenRerenderCalled.current) {
             console.log('rerender internal');
+            lastStateWhenRerenderCalled.current = [...customMonitors];
             console.log(customMonitors);
             rerenderMonitorsContainerRef.current(customMonitors);
         }
@@ -133,7 +133,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             )
         );
     }
-
+    //TODO: fix picture not being resized
     function resetPosition(monitors: FrontendMonitor[], focusedMonitorIdx: number): FrontendMonitor[] {
         console.log("Position reset called");
         console.log(initialMonitors.current);
@@ -166,8 +166,6 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                     : curMon)
                 )
             );
-            if (rerenderMonitorsContainerRef.current)
-                rerenderMonitorsContainerRef.current(customMonitors)
         }
     }
 
@@ -215,8 +213,6 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
         monitors = monitors.map((curMon, idx) => (idx === focusedMonitorIdx
             ? { ...curMon, outputs: curMon.outputs.map((out, outIdx) => (outIdx === 0 ? { ...out, currentMode: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode } : out)) } : curMon));
         setMonitors(monitors)
-        if (rerenderMonitorsContainerRef.current)
-            rerenderMonitorsContainerRef.current(customMonitors)
         return monitors
     }
 

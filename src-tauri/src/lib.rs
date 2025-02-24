@@ -89,6 +89,7 @@ lazy_static! {
 #[tauri::command]
 async fn get_monitors() -> Result<(Vec<FrontendMonitor>, Vec<String>), GenericError> {
     create_dir_all(app_directory_path.join("screenshots")).await?;
+    create_dir_all(app_directory_path.join("presets")).await?;
     let mut xhandle = XHandle::open()?;
     let res = ScreenResources::new(&mut xhandle)?;
     let crtcs = res.crtcs(&mut xhandle)?;
@@ -192,7 +193,7 @@ fn take_screenshots() -> Result<Vec<(String, String)>, ImageError> {
     for monitor in screenshot_monitors {
         let cur_name = monitor.name();
         let file_name = app_directory_path.join(format!("screenshots/{cur_name}.png"));
-        paths.push((cur_name.to_owned(), format!("screenshots/{cur_name}.png")));
+        paths.push((cur_name.to_owned(), file_name.to_str().unwrap().to_owned()));
         monitor.capture_image().unwrap().save(file_name)?;
     }
     Ok(paths)
@@ -254,11 +255,12 @@ async fn set_mode(
     xhandle.set_mode(output_crtc, mode_xid, mode_height, mode_width, &res)?;
     return Ok(());
 }
+//TODO: it not building the presets
 #[tauri::command]
 async fn get_presets() -> Result<Vec<Vec<FrontendMonitor>>, String> {
     let mut presets: Vec<Vec<FrontendMonitor>> = Vec::new();
     for i in 0..5 {
-        let file_name = app_directory_path.join(format!("Presets/Preset{i}.json"));
+        let file_name = app_directory_path.join(format!("presets/preset{i}.json"));
         let cur_file = File::open(&file_name);
         match cur_file {
             Ok(file) => {
@@ -293,7 +295,7 @@ async fn get_presets() -> Result<Vec<Vec<FrontendMonitor>>, String> {
 }
 #[tauri::command]
 async fn overwrite_preset(idx: i32, new_preset: Vec<FrontendMonitor>) -> Result<(), String> {
-    let file_name = app_directory_path.join(format!("Presets/Preset{idx}.json"));
+    let file_name = app_directory_path.join(format!("presets/preset{idx}.json"));
     let new_file = File::create(file_name);
     if let Ok(new_file) = new_file {
         let mut writer = BufWriter::new(new_file);

@@ -65,12 +65,16 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         if (app.current) {
             console.log("rerender called");
             //deletion
+            //app.current!.stage.children.forEach((child) => { child.children.forEach((child) => { child.destroy() }) });
             app.current!.stage.children = [];
+            console.log("cleared");
+            console.log(app.current!.stage.children);
             //rebuilding
-            console.log("children:", app.current!.stage.children);
             for (let i = 0; i < newMonitors.length; i++) {
                 app.current!.stage.addChild(await createMonitorContainer(newMonitors[i]));
             }
+            console.log("done");
+            console.log(app.current!.stage.children);
 
         } else {
             console.log("app not built yet, unable to rerender");
@@ -84,9 +88,12 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         monitorContainer.y = monitor.y / monitorScale + screenDragOffsetTotal.current.y;
         monitorContainer.label = monitor.name;
         monitorContainer.cursor = 'pointer';
-        //TODO: have tauri push images to links
         const monitorGraphic = new Graphics();
         const monitorText = new BitmapText();
+        const textBackgroundGraphic = new Graphics();
+
+
+
 
         // handles if the monitor is disabled(should not be seen and interactive)
         if (monitor.outputs[0].enabled) {
@@ -98,26 +105,57 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             monitorContainer.alpha = 0;
         }
         //square
-        let monitorWidth = monitor.outputs[0].currentMode!.width;
-        let monitorHeight = monitor.outputs[0].currentMode!.height;
+        let monitorWidth = monitor.outputs[0].currentMode!.width / monitorScale;
+        let monitorHeight = monitor.outputs[0].currentMode!.height / monitorScale;
         //handle monitors being sideways
         if (monitor.outputs[0].rotation === Rotation.Left || monitor.outputs[0].rotation === Rotation.Right) {
-            monitorWidth = monitor.outputs[0].currentMode!.height;
-            monitorHeight = monitor.outputs[0].currentMode!.width;
+            monitorWidth = monitor.outputs[0].currentMode!.height / monitorScale;
+            monitorHeight = monitor.outputs[0].currentMode!.width / monitorScale;
         }
         console.log("Width:,", monitorWidth, "Height:", monitorHeight);
 
-        monitorGraphic.rect(0, 0, monitorWidth / monitorScale, monitorHeight / monitorScale);
+        monitorGraphic.rect(0, 0, monitorWidth, monitorHeight);
         monitorGraphic.fillStyle = 'black';
         monitorGraphic.fill();
         monitorGraphic.stroke({ width: 2, color: 'pink' });
         //Screenshot
         let monitorScreenshotSprite: Sprite | undefined;
+
         if (monitor.imgSrc) {
-            let path = convertFileSrc(await join(appDataDirPath, monitor.imgSrc));
+            //TODO: https://v1.tauri.app/v1/api/js/tauri/
+            console.log(monitor.imgSrc);
+            let path = convertFileSrc(monitor.imgSrc);
+            console.log(path);
             let texture = await Assets.load(path);
             monitorScreenshotSprite = new Sprite(texture);
-            monitorScreenshotSprite.setSize((monitorWidth / monitorScale) - 2, (monitorHeight / monitorScale) - 2);
+            switch (monitor.outputs[0].rotation) {
+                case Rotation.Inverted:
+                    //Inverting
+                    monitorScreenshotSprite.x = monitorWidth - 2;
+                    monitorScreenshotSprite.y = monitorHeight - 2;
+                    monitorScreenshotSprite.rotation = Math.PI;
+                    monitorScreenshotSprite.setSize(monitorWidth - 4, monitorHeight - 4);
+                    break;
+                case Rotation.Right:
+                    //Righting
+                    monitorScreenshotSprite.x = monitorWidth - 2;
+                    monitorScreenshotSprite.rotation = Math.PI / 2;
+                    monitorScreenshotSprite.setSize(monitorHeight - 4, monitorWidth - 4);
+
+                    break;
+                case Rotation.Left:
+                    //Lefting
+                    monitorScreenshotSprite.y = monitorHeight - 2;
+                    monitorScreenshotSprite.x = 2;
+                    monitorScreenshotSprite.rotation = -(Math.PI / 2);
+                    monitorScreenshotSprite.setSize(monitorHeight - 4, monitorWidth - 4);
+                    break;
+                default:
+                    monitorScreenshotSprite.y = 2;
+                    monitorScreenshotSprite.x = 2;
+                    monitorScreenshotSprite.setSize(monitorWidth - 4, (monitorHeight) - 4);
+
+            }
         }
 
         //text
@@ -126,32 +164,40 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         switch (monitor.outputs[0].rotation) {
             case Rotation.Inverted:
                 //Inverting
-                monitorText.x = (monitorWidth / monitorScale);
-                monitorText.y = (monitorHeight / monitorScale);
-                monitorText.scale = -1;
+                monitorText.x = monitorWidth;
+                monitorText.y = monitorHeight;
+                monitorText.rotation = Math.PI;
+                textBackgroundGraphic.rect(monitorWidth - monitorText.width, monitorHeight - monitorText.height, monitorText.width, monitorText.height);
                 break;
             case Rotation.Right:
                 //Righting
-                monitorText.x = (monitorWidth / monitorScale);
+                monitorText.y = monitorHeight - monitorText.width;
+                monitorText.x = monitorWidth;
                 monitorText.rotation = Math.PI / 2
+                textBackgroundGraphic.rect(monitorWidth - monitorText.height, monitorHeight - monitorText.width, monitorText.height, monitorText.width);
                 break;
             case Rotation.Left:
                 //Lefting
-                monitorText.y = monitorHeight / monitorScale;
-                monitorText.scale = -1;
-                monitorText.rotation = Math.PI / 2
+                monitorText.y = monitorHeight;
+                monitorText.rotation = -(Math.PI / 2);
+                textBackgroundGraphic.rect(0, monitorHeight - monitorText.width, monitorText.height, monitorText.width);
                 break;
             default:
+                textBackgroundGraphic.rect(monitorText.x, monitorText.y, monitorText.width, monitorText.height);
 
         }
+        console.log(monitorText.x, "|", monitorText.y, "|", monitorText.width, "|", monitorText.height, "|", monitorText.scale.x, monitorText.scale.y);
+        textBackgroundGraphic.fillStyle = 'black'
+        textBackgroundGraphic.fill();
+
         // Setup events for mouse + touch using the pointer events
         monitorContainer.on('mousedown', onDragStart, monitorGraphic);
         monitorContainer.addChild(monitorGraphic);
         if (monitorScreenshotSprite) {
             monitorContainer.addChild(monitorScreenshotSprite)
         }
-        monitorContainer.width = monitorWidth / monitorScale;
-        monitorContainer.height = monitorHeight / monitorScale;
+        monitorContainer.addChild(textBackgroundGraphic);
+        monitorContainer.addChild(monitorText);
         return monitorContainer;
     }
     function onScreenDragStart(eve: FederatedPointerEvent) {
