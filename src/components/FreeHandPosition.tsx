@@ -1,9 +1,7 @@
-import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, BitmapText, Sprite, Assets, FederatedWheelEvent } from 'pixi.js';
+import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, BitmapText, Sprite, Assets } from 'pixi.js';
 import { useState, useRef, Dispatch, SetStateAction, MutableRefObject, useEffect } from 'react';
 import { FrontendMonitor, point as Point, Rotation } from '../globalValues';
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { appDataDir, join } from '@tauri-apps/api/path';
-const appDataDirPath = await appDataDir();
 interface FreeHandPositionProps {
     initialMonitors: MutableRefObject<FrontendMonitor[]>;
     customMonitors: FrontendMonitor[];
@@ -20,7 +18,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
     const initialDragY = useRef(0);
     const previousMonitorOffset = useRef<Point>({ x: 0, y: 0 });
     const previousScreenOffset = useRef<Point>({ x: 0, y: 0 });
-
     const app = useRef<Application | null>(null);
     //needs to be use state to update button color
     const [snapEnabled, setSnapEnabled] = useState(true);
@@ -387,12 +384,9 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         rerenderMonitorsContainerRef.current = rerenderMonitors;
         normalizePositionsRef.current = normalizePositions;
     }, [rerenderMonitors, normalizePositions])
-
+    //TODO: add scale functionality
     return (
         <div style={{ display: 'flex', flexDirection: "row" }}>
-            <p style={{ width: "20vw", height: "50vh" }}><b>Controls:</b> <br /><br />
-                <b>Move Monitors:</b> Hold Left Click + Drag<br /><br />
-                <b>Move Camera:</b> Hold Right Click + Drag</p>
             <canvas style={{ marginLeft: "auto", marginRight: "auto", display: 'block', width: "60vw", height: "60vh" }} ref={canvas => {
                 if (didInit.current) {
                     return;
@@ -404,11 +398,15 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
                 onContextMenu={(e) => { e.preventDefault(); }}
             ></canvas>
             <div style={{ width: "20vw", height: "60vh" }}>
-                <p style={{ width: "20vw", height: "10vh" }}> <b>Additional Functions:</b></p>
                 <button style={{ width: "20vw", height: "10vh" }} onClick={resetMonitorsPositions}>Reset Monitor Positions</button>
                 <button style={{ width: "20vw", height: "10vh" }} onClick={resetCameraPosition}>Reset Camera Position</button>
                 <button style={{ width: "20vw", height: "10vh" }} onClick={() => normalizePositions(customMonitors)}>Normalize Positions</button>
-                <button style={{ width: "20vw", height: "10vh", color: snapEnabled ? 'hotpink' : '#3B3B3B' }} onClick={toggleSnap}>Toggle Snap</button>
+                <button style={{ marginBottom: "auto", width: "20vw", height: "10vh", color: snapEnabled ? 'hotpink' : '#3B3B3B' }} onClick={toggleSnap}>Toggle Snap</button>
+                <h3 className='mini-titles' style={{ height: "5vh", alignContent: "end" }}>Scale</h3>
+                <div style={{ height: "10vh", display: "flex", flexDirection: "row", justifyContent: "center" }}>
+                    <h1 style={{ marginTop: "auto", marginBottom: "auto" }}>1:</h1>
+                    <input style={{ marginTop: "auto", marginBottom: "auto", width: "9vw" }} type="number" value={monitorScale.current} />
+                </div>
             </div>
         </div >
     );

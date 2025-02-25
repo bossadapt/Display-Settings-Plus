@@ -1,15 +1,19 @@
 use std::{
-    fs::File,
+    fs::{File, FileType},
     io::{self, BufWriter, ErrorKind},
     path,
 };
 
 use serde::{Deserialize, Serialize};
-use tokio::fs::create_dir_all;
+use tokio::fs::{create_dir_all, read_dir};
 use xcap::{image::ImageError, XCapError};
 use xrandr::{Crtc, Mode, Rotation, ScreenResources, XHandle, XId, XrandrError};
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-//added this to serialize without editing the library
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Preset {
+    name: String,
+    monitors: Vec<FrontendMonitor>,
+}
 #[derive(Serialize, Deserialize, Debug)]
 struct FrontendMonitor {
     name: String,
@@ -54,11 +58,17 @@ fn mode_from_list(modes: Vec<Mode>, mode_list: &Vec<u64>) -> Vec<Mode> {
 }
 #[derive(Serialize, Debug)]
 enum GenericError {
+    Serde(String),
     Xcap(String),
     Xrandr(XrandrError),
     Io(String),
 }
 
+impl From<serde_json::Error> for GenericError {
+    fn from(e: serde_json::Error) -> Self {
+        GenericError::Serde(e.to_string())
+    }
+}
 impl From<XrandrError> for GenericError {
     fn from(e: XrandrError) -> Self {
         GenericError::Xrandr(e)
@@ -255,40 +265,19 @@ async fn set_mode(
     xhandle.set_mode(output_crtc, mode_xid, mode_height, mode_width, &res)?;
     return Ok(());
 }
-//TODO: it not building the presets
+
 #[tauri::command]
-async fn get_presets() -> Result<Vec<Vec<FrontendMonitor>>, String> {
-    let mut presets: Vec<Vec<FrontendMonitor>> = Vec::new();
-    for i in 0..5 {
-        let file_name = app_directory_path.join(format!("presets/preset{i}.json"));
-        let cur_file = File::open(&file_name);
-        match cur_file {
-            Ok(file) => {
-                presets.push(serde_json::from_reader(file).unwrap_or_default());
-            }
-            Err(err) => match err.kind() {
-                ErrorKind::NotFound => {
-                    let new_frontend_monitor_list: Vec<FrontendMonitor> = Vec::new();
-                    let new_file = File::create(file_name);
-                    if let Ok(new_file) = new_file {
-                        let mut writer = BufWriter::new(new_file);
-                        let to_writer_attempt =
-                            serde_json::to_writer(&mut writer, &new_frontend_monitor_list);
-                        if let Err(err) = to_writer_attempt {
-                            return Err(err.to_string());
-                        }
-                        if io::Write::flush(&mut writer).is_err() {
-                            return Err("Failed to flush wrtier".to_owned());
-                        }
-                        presets.push(new_frontend_monitor_list);
-                    } else {
-                        return Err(new_file.err().unwrap().to_string());
-                    }
-                }
-                _ => {
-                    return Err(err.to_string());
-                }
-            },
+async fn get_presets() -> Result<Vec<Preset>, GenericError> {
+    let mut presets: Vec<Preset> = Vec::new();
+    let mut files_in_presets = read_dir(app_directory_path.join(format!("presets/"))).await?;
+    while let Some(file) = files_in_presets.next_entry().await? {
+        let file_path = file.path();
+        if file_path.extension().and_then(|ext| ext.to_str()) == Some("json") {
+            let file_name = file.file_name().to_string_lossy().to_string();
+            let file_content = tokio::fs::read_to_string(&file_path).await?;
+            let monitors = serde_json::from_str::<Vec<FrontendMonitor>>(&file_content)?;
+            let name = file_name[..file_name.len() - 5].to_owned();
+            presets.push(Preset { name, monitors })
         }
     }
     return Ok(presets);

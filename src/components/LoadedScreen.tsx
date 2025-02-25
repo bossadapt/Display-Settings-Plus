@@ -1,17 +1,18 @@
 import { Dispatch, MutableRefObject, SetStateAction, useRef, useState } from "react";
 import Select from 'react-select';
-import { customSelectTheme, FrontendMonitor, MiniMonitor, Rotation } from "../globalValues";
+import { customSelectTheme, FrontendMonitor, MiniMonitor, Preset, Rotation } from "../globalValues";
 import FreeHandPosition from "./FreeHandPosition";
 import './Loaded.css';
 import FocusedMonitorSettings from "./FocusedMonitorSettings";
 import { invoke } from "@tauri-apps/api/core";
 import ApplySettingsPopup from "./ApplySettingsPopup";
 import SimplePopUp from "./SimplePopUp";
+import Presets from "./Presets";
 interface LoadedProps {
   monitorRefreshRef: MutableRefObject<Function>;
   customMonitors: FrontendMonitor[];
   initialMonitors: MutableRefObject<FrontendMonitor[]>;
-  presets: MutableRefObject<FrontendMonitor[][]>;
+  presets: MutableRefObject<Preset[]>;
   setCustMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
   outputNames: MutableRefObject<String[]>;
 
@@ -25,12 +26,10 @@ export interface focusedSettingsFunctions {
 }
 export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customMonitors, initialMonitors, presets, setCustMonitors, outputNames }) => {
   const [focusedMonitorIdx, setFocusedMonitorIdx] = useState(0);
-  const [focusedPresetIdx, setFocusedPresetIdx] = useState(0);
   const resetFunctions = useRef<focusedSettingsFunctions>({ enable: null, position: null, rotation: null, mode: null, setCrtc: null });
   const applyChangesRef = useRef<((customMonitors: FrontendMonitor[], monitorsBeingApplied: number[]) => void) | null>(null);
   const normalizePositionsRef = useRef<((customMonitors: FrontendMonitor[]) => FrontendMonitor[]) | null>(null);
   const rerenderMonitorsContainerRef = useRef<((customMonitors: FrontendMonitor[]) => void) | null>(null);
-  const presetsOptions = presets.current.map((_preset, idx) => ({ value: idx, label: "Preset " + idx }));
   const [showSimplePopUp, setShowSimplePopUp] = useState(false);
   const [simplePopUpReason, setSimplePopUpReason] = useState("blah blah..");
   //Collection handler
@@ -69,41 +68,8 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
       });
     }
   }
-  //
-  function setFocusedPreset(presetSelected: number) {
-    console.log("setFocus to " + presetSelected);
-    let newMons: FrontendMonitor[] = [];
-    for (let i = 0; i < customMonitors.length; i++) {
-      // has the same xid and has the mode xid needed available
-      let presetAttempt = presets.current[presetSelected].find(
-        (presetMon) =>
-        (customMonitors[i].outputs[0].xid === presetMon.outputs[0].xid &&
-          customMonitors[i].outputs[0].modes.find((mode) => (mode.xid === presetMon.outputs[0].currentMode.xid))));
-      if (presetAttempt) {
-        console.log("monitor number ", i, " was overwritten");
-      }
-      newMons.push(presetAttempt ? { ...presetAttempt } : customMonitors[i])
-    }
-    setCustMonitors(newMons);
-    setFocusedPresetIdx(presetSelected);
-    if (rerenderMonitorsContainerRef.current)
-      rerenderMonitorsContainerRef.current(newMons);
-  }
-  function overwriteFocusedPreset() {
-    let newPreset = normalizePositionsRef.current ? normalizePositionsRef.current(customMonitors) : customMonitors;
-    setShowSimplePopUp(true);
-    setSimplePopUpReason("Overwriting Preset");
-    invoke<FrontendMonitor[][]>("overwrite_preset", {
-      idx: focusedPresetIdx,
-      newPreset: newPreset
-    }).then((_res) => {
-      presets.current[focusedPresetIdx] = customMonitors;
-    }).catch((err) => {
-      console.error(err);
-    });
-    setShowSimplePopUp(false);
 
-  }
+
   function resetAll() {
     setCustMonitors([...initialMonitors.current]);
     if (rerenderMonitorsContainerRef.current)
@@ -177,11 +143,9 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
   return (
     <div className="loadedMain">
       <div style={{ display: "flex", flexDirection: "row" }}>
-        <Select styles={customStyles} onChange={(eve) => { eve ? setFocusedPreset(eve.value) : {} }} options={presetsOptions} value={presetsOptions[focusedPresetIdx]} theme={customSelectTheme}></Select>
-        <button className="majorButtons" onClick={overwriteFocusedPreset}>Overwrite Preset</button>
-        <button className="majorButtons" onClick={copyScript}>Clipboard</button>
-        <button className="majorButtons" style={{ marginLeft: "auto" }} onClick={resetAll}>Reset</button>
+        <button className="majorButtons" onClick={resetAll}>Reset</button>
         <button className="majorButtons" onClick={() => { monitorRefreshRef.current() }}>Resync</button>
+        <button className="majorButtons" style={{ marginLeft: "auto" }} onClick={copyScript}>Clipboard</button>
         <button className="majorButtons" onClick={massApply}>Mass Apply</button>
         <button className="majorButtons" onClick={applyAll}>Safe Apply</button>
       </div>
@@ -193,7 +157,10 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
         <button onClick={applyPrimaryMonitor}>Apply</button>
       </div>
       <hr style={{ marginTop: "5px" }} />
-      <FreeHandPosition customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef} normalizePositionsRef={normalizePositionsRef}></FreeHandPosition>
+      <div style={{ display: 'flex', flexDirection: "row" }}>
+        <Presets presets={presets} customMonitors={customMonitors} setCustMonitors={setCustMonitors} setSimplePopUpReason={setSimplePopUpReason} setShowSimplePopUp={setShowSimplePopUp} normalizePositionsRef={normalizePositionsRef}></Presets>
+        <FreeHandPosition customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef} normalizePositionsRef={normalizePositionsRef}></FreeHandPosition>
+      </div>
       <hr />
       <div>
         <h2>Focused Monitor Settings</h2>

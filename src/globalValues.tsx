@@ -18,7 +18,10 @@ export const customSelectTheme: Theme = {
 
     }
 }
-
+export interface Preset {
+    name: string
+    monitors: FrontendMonitor[]
+}
 export interface point {
     x: number;
     y: number;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { FrontendMonitor } from "./globalValues";
+import { FrontendMonitor, Preset } from "./globalValues";
 import "./App.css";
 import LoadedScreen from "./components/LoadedScreen";
 import LoadingScreen from "./components/LoadingScreen";
@@ -11,7 +11,7 @@ function App() {
   const refreshMonitorsRef = useRef<Function>(refreshMonitors);
   const initialMonitorsInfo = useRef<FrontendMonitor[]>([]);
   const outputNames = useRef<String[]>([]);
-  const presets = useRef<FrontendMonitor[][]>([]);
+  const presets = useRef<Preset[]>([]);
 
   //-1 for cases where there are no monitors
 
@@ -41,7 +41,7 @@ function App() {
   }
   async function getPresets() {
     console.log("getPresets called")
-    invoke<FrontendMonitor[][]>("get_presets", {}).then((res) => {
+    invoke<Preset[]>("get_presets", {}).then((res) => {
       presets.current = res;
     }).catch((err) => {
       console.error(err);

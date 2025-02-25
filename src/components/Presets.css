@@ -1,0 +1,39 @@
+.presets-title{
+    width: 100%;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+.presets-add-button{
+    height: 40px;
+    width: 10px;
+}
+.presets-add-button:hover{
+    color:#39FF14;
+    display: inline-flex;
+    
+  align-items: center; 
+  text-align: center;
+}
+/*https://codepen.io/savwiley/pen/xxVRqXX*/
+.presets-search-bar {
+    width: 100%;
+    padding: 10px;
+    height: 40px;
+    font-size: 18px;
+    outline:none;
+    background: linear-gradient(to left top, #000, #22132e) fixed;
+    border: 2px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.8);
+    transition: all 0.5s;
+  }
+  
+  .presets-search-bar:hover {
+    border: 2px solid rgba(255,255,255,0.5);
+  }
+  .presets-search-bar:focus {
+    border: 2px solid rgba(255,255,255,0.5);
+    background: linear-gradient(to left top, #000, #A64C79) fixed;
+  }

@@ -12,7 +12,14 @@
     margin-bottom: 2vh;
     height: 15vh;
 }
-
+.mini-titles{
+  width: 100%;
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
 .settingsDescriptonContainer{
     width: 20vw;
     margin-left: 5vw;
