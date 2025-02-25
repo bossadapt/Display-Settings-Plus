@@ -1,4 +1,4 @@
-import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, BitmapText, Sprite, Assets } from 'pixi.js';
+import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, BitmapText, Sprite, Assets, FederatedWheelEvent } from 'pixi.js';
 import { useState, useRef, Dispatch, SetStateAction, MutableRefObject, useEffect } from 'react';
 import { FrontendMonitor, point as Point, Rotation } from '../globalValues';
 import { convertFileSrc } from '@tauri-apps/api/core';
@@ -12,11 +12,10 @@ interface FreeHandPositionProps {
     normalizePositionsRef: MutableRefObject<((customMonitors: FrontendMonitor[]) => FrontendMonitor[]) | null>;
 }
 export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonitors, customMonitors, setMonitors: setCustMonitors, rerenderMonitorsContainerRef, normalizePositionsRef }) => {
-    // within 10 px of another mon will cause a snap
     const dragTarget = useRef<null | Container<ContainerChild>>(null)
     const screenDragActive = useRef(false);
     const screenDragOffsetTotal = useRef<Point>({ x: 0, y: 0 });
-    const monitorScale = 10;
+    const monitorScale = useRef(10);
     const initialDragX = useRef(0);
     const initialDragY = useRef(0);
     const previousMonitorOffset = useRef<Point>({ x: 0, y: 0 });
@@ -46,12 +45,23 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         appLocal.stage.on('pointerupoutside', onDragEnd);
         //TODO: maybe make it scalable by turning monitorScale into a useRef
         //https://pixijs.download/dev/docs/events.FederatedWheelEvent.html
+        //appLocal.stage.on("wheelcapture", onWheelChange)
         //appLocal.stage.on('wheel')
         app.current = appLocal;
 
     }
 
+    // function onWheelChange(eve: FederatedWheelEvent) {
+    //     console.log("scroll wheen unit:" + eve.deltaY);
+    //     if (eve.deltaY > 0) {
+    //         monitorScale.current = monitorScale.current + 1;
 
+    //     } else {
+    //         monitorScale.current = monitorScale.current - 1;
+
+    //     }
+    //     rerenderMonitors(customMonitors);
+    // }
     function updateGlobalPosition(monitorName: string, x: number, y: number) {
         setCustMonitors((mons) =>
             mons.map((curMon) =>
@@ -84,8 +94,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         // Container
         const monitorContainer = new Container();
         monitorContainer.isRenderGroup = true;
-        monitorContainer.x = monitor.x / monitorScale + screenDragOffsetTotal.current.x;
-        monitorContainer.y = monitor.y / monitorScale + screenDragOffsetTotal.current.y;
+        monitorContainer.x = monitor.x / monitorScale.current + screenDragOffsetTotal.current.x;
+        monitorContainer.y = monitor.y / monitorScale.current + screenDragOffsetTotal.current.y;
         monitorContainer.label = monitor.name;
         monitorContainer.cursor = 'pointer';
         const monitorGraphic = new Graphics();
@@ -105,12 +115,12 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             monitorContainer.alpha = 0;
         }
         //square
-        let monitorWidth = monitor.outputs[0].currentMode!.width / monitorScale;
-        let monitorHeight = monitor.outputs[0].currentMode!.height / monitorScale;
+        let monitorWidth = monitor.outputs[0].currentMode!.width / monitorScale.current;
+        let monitorHeight = monitor.outputs[0].currentMode!.height / monitorScale.current;
         //handle monitors being sideways
         if (monitor.outputs[0].rotation === Rotation.Left || monitor.outputs[0].rotation === Rotation.Right) {
-            monitorWidth = monitor.outputs[0].currentMode!.height / monitorScale;
-            monitorHeight = monitor.outputs[0].currentMode!.width / monitorScale;
+            monitorWidth = monitor.outputs[0].currentMode!.height / monitorScale.current;
+            monitorHeight = monitor.outputs[0].currentMode!.width / monitorScale.current;
         }
         console.log("Width:,", monitorWidth, "Height:", monitorHeight);
 
@@ -120,42 +130,18 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         monitorGraphic.stroke({ width: 2, color: 'pink' });
         //Screenshot
         let monitorScreenshotSprite: Sprite | undefined;
-
         if (monitor.imgSrc) {
-            //TODO: https://v1.tauri.app/v1/api/js/tauri/
             console.log(monitor.imgSrc);
             let path = convertFileSrc(monitor.imgSrc);
             console.log(path);
             let texture = await Assets.load(path);
             monitorScreenshotSprite = new Sprite(texture);
-            switch (monitor.outputs[0].rotation) {
-                case Rotation.Inverted:
-                    //Inverting
-                    monitorScreenshotSprite.x = monitorWidth - 2;
-                    monitorScreenshotSprite.y = monitorHeight - 2;
-                    monitorScreenshotSprite.rotation = Math.PI;
-                    monitorScreenshotSprite.setSize(monitorWidth - 4, monitorHeight - 4);
-                    break;
-                case Rotation.Right:
-                    //Righting
-                    monitorScreenshotSprite.x = monitorWidth - 2;
-                    monitorScreenshotSprite.rotation = Math.PI / 2;
-                    monitorScreenshotSprite.setSize(monitorHeight - 4, monitorWidth - 4);
 
-                    break;
-                case Rotation.Left:
-                    //Lefting
-                    monitorScreenshotSprite.y = monitorHeight - 2;
-                    monitorScreenshotSprite.x = 2;
-                    monitorScreenshotSprite.rotation = -(Math.PI / 2);
-                    monitorScreenshotSprite.setSize(monitorHeight - 4, monitorWidth - 4);
-                    break;
-                default:
-                    monitorScreenshotSprite.y = 2;
-                    monitorScreenshotSprite.x = 2;
-                    monitorScreenshotSprite.setSize(monitorWidth - 4, (monitorHeight) - 4);
+            monitorScreenshotSprite.setSize(monitorWidth - 4, monitorHeight - 4);
+            monitorScreenshotSprite.y = 2;
+            monitorScreenshotSprite.x = 2;
 
-            }
+
         }
 
         //text
@@ -319,7 +305,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
                 dragTarget.current.x += lowestDif.difX;
                 dragTarget.current.y += lowestDif.difY;
             }
-            updateGlobalPosition(dragTarget.current.label, (dragTarget.current.x - screenDragOffsetTotal.current.x) * monitorScale, (dragTarget.current.y - screenDragOffsetTotal.current.y) * monitorScale);
+            updateGlobalPosition(dragTarget.current.label, (dragTarget.current.x - screenDragOffsetTotal.current.x) * monitorScale.current, (dragTarget.current.y - screenDragOffsetTotal.current.y) * monitorScale.current);
 
             dragTarget.current.alpha = 1;
             dragTarget.current = null;
@@ -341,8 +327,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
     function resetMonitorsPositions() {
         if (app.current) {
             app.current!.stage.children.forEach(((mon, idx) => {
-                mon.x = initialMonitors.current[idx].x / monitorScale;
-                mon.y = initialMonitors.current[idx].y / monitorScale;
+                mon.x = initialMonitors.current[idx].x / monitorScale.current;
+                mon.y = initialMonitors.current[idx].y / monitorScale.current;
             }));
         }
         setCustMonitors((mons) => mons.map((curMon, idx) => ({ ...curMon, x: initialMonitors.current[idx].x, y: initialMonitors.current[idx].y })));
@@ -381,8 +367,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             app.current.stage.children.forEach((mon, idx) => {
                 mon.x -= minOffsetX;
                 mon.y -= minOffsetY;
-                newMonitors[idx].x = mon.x * monitorScale;
-                newMonitors[idx].y = mon.y * monitorScale;
+                newMonitors[idx].x = mon.x * monitorScale.current;
+                newMonitors[idx].y = mon.y * monitorScale.current;
             });
             setCustMonitors((oldMons) => (oldMons.map((mon, idx) => ({
                 ...mon,
