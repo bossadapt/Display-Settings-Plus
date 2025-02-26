@@ -17,6 +17,12 @@
   align-items: center; 
   text-align: center;
 }
+.preset-delete-button:hover{
+  color:red;
+}
+.selected-preset-button{
+  color:hotpink;
+}
 /*https://codepen.io/savwiley/pen/xxVRqXX*/
 .presets-search-bar {
     width: 100%;

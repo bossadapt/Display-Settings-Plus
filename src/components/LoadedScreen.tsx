@@ -8,14 +8,16 @@ import { invoke } from "@tauri-apps/api/core";
 import ApplySettingsPopup from "./ApplySettingsPopup";
 import SimplePopUp from "./SimplePopUp";
 import Presets from "./Presets";
+import SingleErrorPopup, { SingleError } from "./SingleErrorPopUp";
 interface LoadedProps {
+  singleErrorProps: SingleError;
   monitorRefreshRef: MutableRefObject<Function>;
   customMonitors: FrontendMonitor[];
   initialMonitors: MutableRefObject<FrontendMonitor[]>;
-  presets: MutableRefObject<Preset[]>;
+  presets: Preset[];
+  setPresets: Dispatch<SetStateAction<Preset[]>>;
   setCustMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
   outputNames: MutableRefObject<String[]>;
-
 }
 export interface focusedSettingsFunctions {
   enable: ((monitors: FrontendMonitor[], focusedMonitorIdx: number, enabled: boolean) => FrontendMonitor[]) | null;
@@ -24,7 +26,7 @@ export interface focusedSettingsFunctions {
   mode: ((monitors: FrontendMonitor[], focusedMonitorIdx: number) => FrontendMonitor[]) | null;
   setCrtc: ((monitors: FrontendMonitor[], focusedMonitorIdx: number, newCrtc: number) => FrontendMonitor[]) | null;
 }
-export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customMonitors, initialMonitors, presets, setCustMonitors, outputNames }) => {
+export const LoadedScreen: React.FC<LoadedProps> = ({ singleErrorProps, monitorRefreshRef, customMonitors, initialMonitors, presets, setPresets, setCustMonitors, outputNames }) => {
   const [focusedMonitorIdx, setFocusedMonitorIdx] = useState(0);
   const resetFunctions = useRef<focusedSettingsFunctions>({ enable: null, position: null, rotation: null, mode: null, setCrtc: null });
   const applyChangesRef = useRef<((customMonitors: FrontendMonitor[], monitorsBeingApplied: number[]) => void) | null>(null);
@@ -32,6 +34,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
   const rerenderMonitorsContainerRef = useRef<((customMonitors: FrontendMonitor[]) => void) | null>(null);
   const [showSimplePopUp, setShowSimplePopUp] = useState(false);
   const [simplePopUpReason, setSimplePopUpReason] = useState("blah blah..");
+  const [monitorScale, setMonitorScale] = useState(10);
   //Collection handler
   async function applyAll() {
     console.log("apply all called")
@@ -64,7 +67,8 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
         initialMonitors.current[newPrimaryIndex].isPrimary = true;
 
       }).catch((reason) => {
-        console.log("Primary not properly set:", reason);
+        singleErrorProps.setShowSingleError(true);
+        singleErrorProps.setSingleErrorText("Failed to set primary monitor due to " + reason)
       });
     }
   }
@@ -105,7 +109,8 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
         }
         initialMonitors.current = [...customMonitors];
       }).catch((err) => {
-        console.error(err);
+        singleErrorProps.setShowSingleError(true);
+        singleErrorProps.setSingleErrorText("Quick failed due to " + err)
       });
     }
     setShowSimplePopUp(false);
@@ -158,8 +163,8 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
       </div>
       <hr style={{ marginTop: "5px" }} />
       <div style={{ display: 'flex', flexDirection: "row" }}>
-        <Presets presets={presets} customMonitors={customMonitors} setCustMonitors={setCustMonitors} setSimplePopUpReason={setSimplePopUpReason} setShowSimplePopUp={setShowSimplePopUp} normalizePositionsRef={normalizePositionsRef}></Presets>
-        <FreeHandPosition customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef} normalizePositionsRef={normalizePositionsRef}></FreeHandPosition>
+        <Presets presets={presets} setPresets={setPresets} customMonitors={customMonitors} setCustMonitors={setCustMonitors} setSimplePopUpReason={setSimplePopUpReason} setShowSimplePopUp={setShowSimplePopUp} normalizePositionsRef={normalizePositionsRef} singleError={singleErrorProps}></Presets>
+        <FreeHandPosition monitorScale={monitorScale} setMonitorScale={setMonitorScale} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef} normalizePositionsRef={normalizePositionsRef}></FreeHandPosition>
       </div>
       <hr />
       <div>
@@ -169,10 +174,11 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ monitorRefreshRef, customM
       </div>
       <hr />
       <div>
-        <FocusedMonitorSettings resetFunctions={resetFunctions} focusedMonitorIdx={focusedMonitorIdx} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef}></FocusedMonitorSettings>
+        <FocusedMonitorSettings monitorScale={monitorScale} resetFunctions={resetFunctions} focusedMonitorIdx={focusedMonitorIdx} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef}></FocusedMonitorSettings>
       </div>
       <ApplySettingsPopup resetFunctions={resetFunctions} applyChangesRef={applyChangesRef} initialMonitors={initialMonitors} normalizePositionsRef={normalizePositionsRef}></ApplySettingsPopup>
       <SimplePopUp showSimplePopUp={showSimplePopUp} reasonForPopUp={simplePopUpReason}></SimplePopUp>
+      <SingleErrorPopup setSingleErrorText={singleErrorProps.setSingleErrorText} showSingleError={singleErrorProps.showSingleError} singleErrorText={singleErrorProps.singleErrorText} setShowSingleError={singleErrorProps.setShowSingleError}></SingleErrorPopup>
     </div >
   );
 }

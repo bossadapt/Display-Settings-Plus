@@ -1,11 +1,11 @@
 use std::{
-    fs::{File, FileType},
-    io::{self, BufWriter, ErrorKind},
+    fs::File,
+    io::{self, BufWriter},
     path,
 };
 
 use serde::{Deserialize, Serialize};
-use tokio::fs::{create_dir_all, read_dir};
+use tokio::fs::{create_dir_all, read_dir, remove_file};
 use xcap::{image::ImageError, XCapError};
 use xrandr::{Crtc, Mode, Rotation, ScreenResources, XHandle, XId, XrandrError};
 
@@ -282,23 +282,20 @@ async fn get_presets() -> Result<Vec<Preset>, GenericError> {
     }
     return Ok(presets);
 }
+///Used by both overwrite preset and create preset
 #[tauri::command]
-async fn overwrite_preset(idx: i32, new_preset: Vec<FrontendMonitor>) -> Result<(), String> {
-    let file_name = app_directory_path.join(format!("presets/preset{idx}.json"));
-    let new_file = File::create(file_name);
-    if let Ok(new_file) = new_file {
-        let mut writer = BufWriter::new(new_file);
-        let to_writer_attempt = serde_json::to_writer(&mut writer, &new_preset);
-        if let Err(err) = to_writer_attempt {
-            return Err(err.to_string());
-        }
-        let flush_attempt = io::Write::flush(&mut writer);
-        if let Err(err) = flush_attempt {
-            return Err(err.to_string());
-        }
-    } else {
-        return Err(new_file.err().unwrap().to_string());
-    }
+async fn create_preset(preset: Preset) -> Result<(), GenericError> {
+    let file_name = app_directory_path.join(format!("presets/{}.json", preset.name));
+    let new_file = File::create(file_name)?;
+    let mut writer = BufWriter::new(new_file);
+    serde_json::to_writer(&mut writer, &preset.monitors)?;
+    io::Write::flush(&mut writer)?;
+    return Ok(());
+}
+#[tauri::command]
+async fn delete_preset(preset_name: String) -> Result<(), GenericError> {
+    let file_name = app_directory_path.join(format!("presets/{preset_name}.json"));
+    remove_file(file_name).await?;
     return Ok(());
 }
 #[derive(Deserialize, Debug)]
@@ -384,27 +381,23 @@ pub fn run() {
             set_rotation,
             set_mode,
             get_presets,
-            overwrite_preset,
+            create_preset,
+            delete_preset,
             quick_apply
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-//TODO: add a way to generate
 #[cfg(test)]
 mod tests {
     use std::time::Instant;
 
     use super::*;
 
-    fn handle() -> XHandle {
-        XHandle::open().unwrap()
-    }
-
     #[tokio::test]
     async fn speed_test_for_outputs() {
         let start = Instant::now();
-        let monitors = get_monitors().await.unwrap();
+        let _monitors = get_monitors().await.unwrap();
         println!("Time taken: {:#?}", start.elapsed())
     }
 

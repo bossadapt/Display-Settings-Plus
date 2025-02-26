@@ -41,17 +41,6 @@
   margin-right: auto;
   height: 40px;
 }
-/*
-.legendsContainer{
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-}
-.legendsText{
-  margin-left: auto;
-  margin-right: auto;
-}
-   */
   .popupContentsContainer{
     display: flex;
     flex-direction: column;

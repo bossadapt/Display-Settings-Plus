@@ -7,23 +7,26 @@ interface FocusedMonitorSettingsProps {
     focusedMonitorIdx: number;
     customMonitors: FrontendMonitor[];
     initialMonitors: MutableRefObject<FrontendMonitor[]>;
+    monitorScale: number;
     setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
     rerenderMonitorsContainerRef: MutableRefObject<((newMonitors: FrontendMonitor[]) => void) | null>;
     resetFunctions: MutableRefObject<focusedSettingsFunctions>;
 }
 export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
-    { focusedMonitorIdx, customMonitors, initialMonitors, setMonitors, rerenderMonitorsContainerRef, resetFunctions }) => {
+    { focusedMonitorIdx, customMonitors, initialMonitors, monitorScale, setMonitors, rerenderMonitorsContainerRef, resetFunctions }) => {
     let lastStateWhenRerenderCalled = useRef<FrontendMonitor[]>([]);
+    let lastMonitorScaleWhenRerenderCalled = useRef<number>(0);
     //if there are any size changes, then the monitors need to rerendered without affecting the order integrity or stretching
     //MANUAL ATTEMPT
     useEffect(() => {
-        if (rerenderMonitorsContainerRef.current && customMonitors !== lastStateWhenRerenderCalled.current) {
+        if (rerenderMonitorsContainerRef.current && (customMonitors !== lastStateWhenRerenderCalled.current || lastMonitorScaleWhenRerenderCalled.current !== monitorScale)) {
             console.log('rerender internal');
             lastStateWhenRerenderCalled.current = [...customMonitors];
+            lastMonitorScaleWhenRerenderCalled.current = monitorScale;
             console.log(customMonitors);
             rerenderMonitorsContainerRef.current(customMonitors);
         }
-    }, [customMonitors]);
+    }, [customMonitors, monitorScale]);
     useEffect(() => {
         resetFunctions.current.enable = setEnabled;
         resetFunctions.current.position = resetPosition;

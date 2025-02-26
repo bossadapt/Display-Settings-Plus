@@ -2,25 +2,25 @@ import { Dispatch, MutableRefObject, SetStateAction, useState } from "react";
 import { FrontendMonitor, Preset } from "../globalValues";
 import { invoke } from "@tauri-apps/api/core";
 import "./Presets.css";
+import { SingleError } from "./SingleErrorPopUp";
 interface PresetsProps {
-    presets: MutableRefObject<Preset[]>;
+    presets: Preset[];
+    setPresets: Dispatch<SetStateAction<Preset[]>>;
     customMonitors: FrontendMonitor[];
     setCustMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
     normalizePositionsRef: MutableRefObject<((customMonitors: FrontendMonitor[]) => FrontendMonitor[]) | null>;
     setShowSimplePopUp: Dispatch<SetStateAction<boolean>>;
     setSimplePopUpReason: Dispatch<SetStateAction<string>>;
-
+    singleError: SingleError;
 }
-export const Presets: React.FC<PresetsProps> = ({ presets, customMonitors, setCustMonitors, normalizePositionsRef, setShowSimplePopUp, setSimplePopUpReason }) => {
-    const [focusedPresetIdx, setFocusedPresetIdx] = useState(-1);
+export const Presets: React.FC<PresetsProps> = ({ presets, setPresets, customMonitors, setCustMonitors, normalizePositionsRef, setShowSimplePopUp, setSimplePopUpReason, singleError }) => {
+    const [focusedPresetValue, setFocusedPresetValue] = useState<Preset | undefined>(undefined);
     const [presetSearchTerm, setPresetSearchTerm] = useState("");
-    //TODO: need add and delete button functionality
-    function setFocusedPreset(presetSelected: number) {
-        console.log("setFocus to " + presetSelected);
+    function setFocusedPreset(preset: Preset) {
         let newMons: FrontendMonitor[] = [];
         for (let i = 0; i < customMonitors.length; i++) {
             // has the same xid and has the mode xid needed available
-            let presetAttempt = presets.current[presetSelected].monitors.find(
+            let presetAttempt = preset.monitors.find(
                 (presetMon) =>
                 (customMonitors[i].outputs[0].xid === presetMon.outputs[0].xid &&
                     customMonitors[i].outputs[0].modes.find((mode) => (mode.xid === presetMon.outputs[0].currentMode.xid))));
@@ -30,20 +30,64 @@ export const Presets: React.FC<PresetsProps> = ({ presets, customMonitors, setCu
             newMons.push(presetAttempt ? { ...presetAttempt } : customMonitors[i])
         }
         setCustMonitors(newMons);
-        setFocusedPresetIdx(presetSelected);
+        setFocusedPresetValue(preset);
     }
     function overwriteFocusedPreset() {
-        if (focusedPresetIdx !== -1) {
-            let newPreset = normalizePositionsRef.current ? normalizePositionsRef.current(customMonitors) : customMonitors;
+        if (focusedPresetValue) {
+            let newMonitors = normalizePositionsRef.current ? normalizePositionsRef.current(customMonitors) : customMonitors;
+            let newPreset = { name: focusedPresetValue.name, monitors: newMonitors };
             setShowSimplePopUp(true);
             setSimplePopUpReason("Overwriting Preset");
-            invoke<FrontendMonitor[][]>("overwrite_preset", {
-                idx: focusedPresetIdx,
-                newPreset: newPreset
+            invoke("create_preset", {
+                preset: { name: focusedPresetValue.name, monitors: newMonitors }
             }).then((_res) => {
-                presets.current[focusedPresetIdx].monitors = customMonitors;
+                setPresets((oldPresets) => (oldPresets.map((preset) => (preset.name == focusedPresetValue.name ? newPreset : preset))));
+                setFocusedPresetValue(newPreset);
             }).catch((err) => {
-                console.error(err);
+                singleError.setShowSingleError(true);
+                singleError.setSingleErrorText("Overwrite Preset failed due to " + err)
+            });
+            setShowSimplePopUp(false);
+        }
+    }
+    function deletePreset(presetName: string) {
+        setShowSimplePopUp(true);
+        setSimplePopUpReason("Deleting Preset");
+        console.log("deleting ", presetName);
+        invoke("delete_preset", { presetName }).then((_res) => {
+            if (focusedPresetValue && focusedPresetValue.name == presetName) {
+                setFocusedPresetValue(undefined);
+            }
+            setPresets((oldPresets) => (oldPresets.filter((preset) => (preset.name != presetName))))
+            console.log("preset deleted");
+        }).catch((err) => {
+            singleError.setShowSingleError(true);
+            singleError.setSingleErrorText("Delete failed due to " + err)
+        });
+        setShowSimplePopUp(false);
+
+    }
+    function createPreset() {
+        if (presetSearchTerm.trim() !== "") {
+            let preset = { name: presetSearchTerm, monitors: [] };
+            setShowSimplePopUp(true);
+            setSimplePopUpReason("Creating Preset");
+            invoke("create_preset", {
+                preset
+            }).then((_res) => {
+                if (presets.findIndex((preset) => (preset.name == presetSearchTerm)) !== -1) {
+                    setPresets((oldPresets) => (oldPresets.map((preset) => (preset.name == presetSearchTerm ? { name: preset.name, monitors: [] } : preset))));
+                } else {
+                    setPresets((oldPresets) => {
+                        let newPresets = [...oldPresets];
+                        newPresets.push(preset);
+                        return (newPresets);
+                    })
+                }
+                setPresetSearchTerm("");
+            }).catch((err) => {
+                singleError.setShowSingleError(true);
+                singleError.setSingleErrorText("Create failed due to " + err)
             });
             setShowSimplePopUp(false);
         }
@@ -53,17 +97,19 @@ export const Presets: React.FC<PresetsProps> = ({ presets, customMonitors, setCu
             <h3 className="mini-titles">Presets</h3>
             <div style={{ display: "flex", flexDirection: "row" }}>
                 <input className="presets-search-bar" type="text" value={presetSearchTerm} onChange={(eve) => { setPresetSearchTerm(eve.target.value) }} />
-                <button className="presets-add-button">+</button>
+                <button className="presets-add-button" onClick={createPreset}>+</button>
             </div>
         </div>
+        <hr />
         <div style={{ height: "37vh", overflowY: "scroll" }}>
-            {presets.current.filter((preset) => (preset.name.includes(presetSearchTerm))).sort((a, b) => (a.name > b.name ? 1 : -1)).map((preset, idx) => (
-                <div style={{ display: "flex", flexDirection: "row" }}>
-                    <button style={{ width: "15vw" }} disabled={focusedPresetIdx === idx} onClick={() => setFocusedPreset(idx)}>{preset.name}</button>
-                    <button style={{ width: "5vw" }}>X</button>
+            {presets.filter((preset) => (preset.name.includes(presetSearchTerm))).sort((a, b) => (a.name > b.name ? 1 : -1)).map((preset) => (
+                <div key={preset.name} style={{ display: "flex", flexDirection: "row" }}>
+                    <button style={{ width: "15vw" }} className={focusedPresetValue && focusedPresetValue.name === preset.name ? "selected-preset-button" : ""} onClick={() => setFocusedPreset(preset)}>{preset.name}</button>
+                    <button style={{ width: "5vw" }} className="preset-delete-button" onClick={() => deletePreset(preset.name)}>X</button>
                 </div>
             ))}
         </div>
+        <hr />
         <button onClick={overwriteFocusedPreset}>Overwrite Preset</button>
     </div>);
 }

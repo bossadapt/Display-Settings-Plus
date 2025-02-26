@@ -1,19 +1,23 @@
 import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, BitmapText, Sprite, Assets } from 'pixi.js';
+
 import { useState, useRef, Dispatch, SetStateAction, MutableRefObject, useEffect } from 'react';
 import { FrontendMonitor, point as Point, Rotation } from '../globalValues';
 import { convertFileSrc } from '@tauri-apps/api/core';
+
+
 interface FreeHandPositionProps {
     initialMonitors: MutableRefObject<FrontendMonitor[]>;
     customMonitors: FrontendMonitor[];
     setMonitors: Dispatch<SetStateAction<FrontendMonitor[]>>;
     rerenderMonitorsContainerRef: MutableRefObject<Function | null>;
     normalizePositionsRef: MutableRefObject<((customMonitors: FrontendMonitor[]) => FrontendMonitor[]) | null>;
+    monitorScale: number;
+    setMonitorScale: Dispatch<SetStateAction<number>>;
 }
-export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonitors, customMonitors, setMonitors: setCustMonitors, rerenderMonitorsContainerRef, normalizePositionsRef }) => {
+export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonitors, customMonitors, setMonitors: setCustMonitors, rerenderMonitorsContainerRef, normalizePositionsRef, monitorScale, setMonitorScale }) => {
     const dragTarget = useRef<null | Container<ContainerChild>>(null)
     const screenDragActive = useRef(false);
     const screenDragOffsetTotal = useRef<Point>({ x: 0, y: 0 });
-    const monitorScale = useRef(10);
     const initialDragX = useRef(0);
     const initialDragY = useRef(0);
     const previousMonitorOffset = useRef<Point>({ x: 0, y: 0 });
@@ -30,7 +34,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         for (let i = 0; i < customMonitors.length; i++) {
             appLocal.stage.addChild(await createMonitorContainer(customMonitors[i]));
         }
-
         appLocal.resizeTo = window;
         appLocal.stage.eventMode = 'static';
         appLocal.stage.hitArea = appLocal.screen;
@@ -91,8 +94,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         // Container
         const monitorContainer = new Container();
         monitorContainer.isRenderGroup = true;
-        monitorContainer.x = monitor.x / monitorScale.current + screenDragOffsetTotal.current.x;
-        monitorContainer.y = monitor.y / monitorScale.current + screenDragOffsetTotal.current.y;
+        monitorContainer.x = monitor.x / monitorScale + screenDragOffsetTotal.current.x;
+        monitorContainer.y = monitor.y / monitorScale + screenDragOffsetTotal.current.y;
         monitorContainer.label = monitor.name;
         monitorContainer.cursor = 'pointer';
         const monitorGraphic = new Graphics();
@@ -112,12 +115,12 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             monitorContainer.alpha = 0;
         }
         //square
-        let monitorWidth = monitor.outputs[0].currentMode!.width / monitorScale.current;
-        let monitorHeight = monitor.outputs[0].currentMode!.height / monitorScale.current;
+        let monitorWidth = monitor.outputs[0].currentMode!.width / monitorScale;
+        let monitorHeight = monitor.outputs[0].currentMode!.height / monitorScale;
         //handle monitors being sideways
         if (monitor.outputs[0].rotation === Rotation.Left || monitor.outputs[0].rotation === Rotation.Right) {
-            monitorWidth = monitor.outputs[0].currentMode!.height / monitorScale.current;
-            monitorHeight = monitor.outputs[0].currentMode!.width / monitorScale.current;
+            monitorWidth = monitor.outputs[0].currentMode!.height / monitorScale;
+            monitorHeight = monitor.outputs[0].currentMode!.width / monitorScale;
         }
         console.log("Width:,", monitorWidth, "Height:", monitorHeight);
 
@@ -302,7 +305,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
                 dragTarget.current.x += lowestDif.difX;
                 dragTarget.current.y += lowestDif.difY;
             }
-            updateGlobalPosition(dragTarget.current.label, (dragTarget.current.x - screenDragOffsetTotal.current.x) * monitorScale.current, (dragTarget.current.y - screenDragOffsetTotal.current.y) * monitorScale.current);
+            updateGlobalPosition(dragTarget.current.label, (dragTarget.current.x - screenDragOffsetTotal.current.x) * monitorScale, (dragTarget.current.y - screenDragOffsetTotal.current.y) * monitorScale);
 
             dragTarget.current.alpha = 1;
             dragTarget.current = null;
@@ -324,8 +327,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
     function resetMonitorsPositions() {
         if (app.current) {
             app.current!.stage.children.forEach(((mon, idx) => {
-                mon.x = initialMonitors.current[idx].x / monitorScale.current;
-                mon.y = initialMonitors.current[idx].y / monitorScale.current;
+                mon.x = initialMonitors.current[idx].x / monitorScale;
+                mon.y = initialMonitors.current[idx].y / monitorScale;
             }));
         }
         setCustMonitors((mons) => mons.map((curMon, idx) => ({ ...curMon, x: initialMonitors.current[idx].x, y: initialMonitors.current[idx].y })));
@@ -364,8 +367,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             app.current.stage.children.forEach((mon, idx) => {
                 mon.x -= minOffsetX;
                 mon.y -= minOffsetY;
-                newMonitors[idx].x = mon.x * monitorScale.current;
-                newMonitors[idx].y = mon.y * monitorScale.current;
+                newMonitors[idx].x = mon.x * monitorScale;
+                newMonitors[idx].y = mon.y * monitorScale;
             });
             setCustMonitors((oldMons) => (oldMons.map((mon, idx) => ({
                 ...mon,
@@ -384,7 +387,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         rerenderMonitorsContainerRef.current = rerenderMonitors;
         normalizePositionsRef.current = normalizePositions;
     }, [rerenderMonitors, normalizePositions])
-    //TODO: add scale functionality
     return (
         <div style={{ display: 'flex', flexDirection: "row" }}>
             <canvas style={{ marginLeft: "auto", marginRight: "auto", display: 'block', width: "60vw", height: "60vh" }} ref={canvas => {
@@ -405,7 +407,12 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
                 <h3 className='mini-titles' style={{ height: "5vh", alignContent: "end" }}>Scale</h3>
                 <div style={{ height: "10vh", display: "flex", flexDirection: "row", justifyContent: "center" }}>
                     <h1 style={{ marginTop: "auto", marginBottom: "auto" }}>1:</h1>
-                    <input style={{ marginTop: "auto", marginBottom: "auto", width: "9vw" }} type="number" value={monitorScale.current} />
+                    <input style={{ marginTop: "auto", marginBottom: "auto", width: "9vw" }} type="number" onChange={(eve) => {
+                        let newMonitorScale = Number(eve.target.value);
+                        if (newMonitorScale > 0) {
+                            setMonitorScale(newMonitorScale);
+                        }
+                    }} value={monitorScale} />
                 </div>
             </div>
         </div >
