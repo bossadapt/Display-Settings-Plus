@@ -167,7 +167,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ singleErrorProps, monitorR
       <hr style={{ marginTop: "5px" }} />
       <div style={{ display: 'flex', flexDirection: "row", height: "54vh" }}>
         <Presets presets={presets} setPresets={setPresets} customMonitors={customMonitors} setCustMonitors={setCustMonitors} setSimplePopUpReason={setSimplePopUpReason} setShowSimplePopUp={setShowSimplePopUp} normalizePositionsRef={normalizePositionsRef} singleError={singleErrorProps}></Presets>
-        <FreeHandPosition monitorScale={monitorScale} setMonitorScale={setMonitorScale} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef} normalizePositionsRef={normalizePositionsRef}></FreeHandPosition>
+        <FreeHandPosition setFocusedMonitorIdx={setFocusedMonitorIdx} monitorScale={monitorScale} setMonitorScale={setMonitorScale} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef} normalizePositionsRef={normalizePositionsRef}></FreeHandPosition>
       </div>
       <hr />
       <div>

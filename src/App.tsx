@@ -32,6 +32,7 @@ function App() {
     init();
 
   }, []);
+  //TODO: click inside freehand will set focus monitor
   //TODO: Clean UI
   //TODO: Write Read Me
 

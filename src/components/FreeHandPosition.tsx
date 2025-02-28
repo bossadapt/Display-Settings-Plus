@@ -13,8 +13,9 @@ interface FreeHandPositionProps {
     normalizePositionsRef: MutableRefObject<((customMonitors: FrontendMonitor[]) => FrontendMonitor[]) | null>;
     monitorScale: number;
     setMonitorScale: Dispatch<SetStateAction<number>>;
+    setFocusedMonitorIdx: Dispatch<SetStateAction<number>>;
 }
-export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonitors, customMonitors, setMonitors: setCustMonitors, rerenderMonitorsContainerRef, normalizePositionsRef, monitorScale, setMonitorScale }) => {
+export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonitors, customMonitors, setMonitors: setCustMonitors, rerenderMonitorsContainerRef, normalizePositionsRef, monitorScale, setMonitorScale, setFocusedMonitorIdx }) => {
     const dragTarget = useRef<null | Container<ContainerChild>>(null)
     const screenDragActive = useRef(false);
     const screenDragOffsetTotal = useRef<Point>({ x: 0, y: 0 });
@@ -212,10 +213,9 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
     function onDragStart(eve: FederatedPointerEvent) {
         eve.target.alpha = 0.5;
         dragTarget.current = eve.target;
-
+        setFocusedMonitorIdx(initialMonitors.current.findIndex((mon) => mon.name == eve.target.label));
         initialDragX.current = eve.target.x;
         initialDragY.current = eve.target.x;
-
         previousMonitorOffset.current.x = eve.globalX;
         previousMonitorOffset.current.y = eve.globalY;
 
