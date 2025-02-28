@@ -493,7 +493,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
     }, [rerenderMonitors, normalizePositions])
     return (
         <div style={{ display: 'flex', flexDirection: "row" }}>
-            <canvas style={{ marginLeft: "auto", marginRight: "auto", display: 'block', width: "60vw", height: "60vh" }} ref={canvas => {
+            <canvas style={{ marginLeft: "auto", marginRight: "auto", display: 'block', width: "60vw", height: "100%" }} ref={canvas => {
                 if (didInit.current) {
                     return;
                 }
@@ -503,20 +503,22 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             }}
                 onContextMenu={(e) => { e.preventDefault(); }}
             ></canvas>
-            <div style={{ width: "20vw", height: "60vh" }}>
+            <div className='right-freehand-container'>
                 <button className='freehand-function-buttons' onClick={resetMonitorsPositions}>Reset Monitor Positions</button>
                 <button className='freehand-function-buttons' onClick={resetCameraPosition}>Reset Camera Position</button>
                 <button className='freehand-function-buttons' onClick={() => normalizePositions(customMonitorsRef.current)}>Normalize Positions</button>
-                <button className='freehand-function-buttons' style={{ marginBottom: "auto", color: snapEnabled ? 'hotpink' : '#3B3B3B' }} onClick={toggleSnap}>Toggle Snap</button>
-                <h3 className='mini-titles' style={{ height: "5vh", alignContent: "end" }}>Scale</h3>
+                <button className='freehand-function-buttons' style={{ color: snapEnabled ? 'hotpink' : '#3B3B3B' }} onClick={toggleSnap}>Toggle Snap</button>
                 <div className='scale-container'>
-                    <h1 className='scale-base-text'>1:</h1>
-                    <input className='scale-input' type="number" onChange={(eve) => {
-                        let newMonitorScale = Number(eve.target.value);
-                        if (newMonitorScale > 0) {
-                            setMonitorScale(newMonitorScale);
-                        }
-                    }} value={monitorScale} />
+                    <h3 className='mini-titles'>Scale</h3>
+                    <div className='scale-container-mini'>
+                        <h1 className='scale-base-text'>1:</h1>
+                        <input className='scale-input' type="number" onChange={(eve) => {
+                            let newMonitorScale = Number(eve.target.value);
+                            if (newMonitorScale > 0) {
+                                setMonitorScale(newMonitorScale);
+                            }
+                        }} value={monitorScale} />
+                    </div>
                 </div>
             </div>
         </div >

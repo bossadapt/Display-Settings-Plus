@@ -33,6 +33,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ singleErrorProps, monitorR
   const normalizePositionsRef = useRef<((customMonitors: FrontendMonitor[]) => FrontendMonitor[]) | null>(null);
   const rerenderMonitorsContainerRef = useRef<((customMonitors: FrontendMonitor[]) => void) | null>(null);
   const [showSimplePopUp, setShowSimplePopUp] = useState(false);
+  const [applyChangesPopupShowing, setApplyChangesPopupShowing] = useState(false);
   const [simplePopUpReason, setSimplePopUpReason] = useState("blah blah..");
   const [monitorScale, setMonitorScale] = useState(10);
   //Collection handler
@@ -41,7 +42,9 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ singleErrorProps, monitorR
     await applyPrimaryMonitor();
     if (applyChangesRef.current) {
       console.log("applying all exists");
+      setApplyChangesPopupShowing(true);
       await applyChangesRef.current(customMonitors, customMonitors.map((_mon, idx) => (idx)));
+      setApplyChangesPopupShowing(false);
     }
     console.log("after initial:");
     console.log(initialMonitors.current);
@@ -146,7 +149,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ singleErrorProps, monitorR
     }
   }
   return (
-    <div className="loadedMain">
+    <div className="loadedMain" style={{ overflowY: showSimplePopUp || singleErrorProps.showSingleError || applyChangesPopupShowing ? "hidden" : "scroll" }}>
       <div style={{ display: "flex", flexDirection: "row" }}>
         <button className="majorButtons" onClick={resetAll}>Reset</button>
         <button className="majorButtons" onClick={() => { monitorRefreshRef.current() }}>Resync</button>
@@ -162,7 +165,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ singleErrorProps, monitorR
         <button onClick={applyPrimaryMonitor}>Apply</button>
       </div>
       <hr style={{ marginTop: "5px" }} />
-      <div style={{ display: 'flex', flexDirection: "row" }}>
+      <div style={{ display: 'flex', flexDirection: "row", height: "54vh" }}>
         <Presets presets={presets} setPresets={setPresets} customMonitors={customMonitors} setCustMonitors={setCustMonitors} setSimplePopUpReason={setSimplePopUpReason} setShowSimplePopUp={setShowSimplePopUp} normalizePositionsRef={normalizePositionsRef} singleError={singleErrorProps}></Presets>
         <FreeHandPosition monitorScale={monitorScale} setMonitorScale={setMonitorScale} customMonitors={customMonitors} initialMonitors={initialMonitors} setMonitors={setCustMonitors} rerenderMonitorsContainerRef={rerenderMonitorsContainerRef} normalizePositionsRef={normalizePositionsRef}></FreeHandPosition>
       </div>

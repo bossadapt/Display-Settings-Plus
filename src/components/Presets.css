@@ -1,5 +1,13 @@
+.presets-top-container{
+  height: 75px;
+}
+.presets-list-container{
+  height: calc( 85% - 84px);
+  overflow-y: scroll; 
+}
 .presets-title{
     width: 100%;
+    height: 25px;
     text-align: center;
     margin-left: auto;
     margin-right: auto;
@@ -7,7 +15,7 @@
     margin-bottom: 5px;
 }
 .presets-add-button{
-    height: 40px;
+    height:  40px;
     width: 10px;
 }
 .presets-add-button:hover{
@@ -17,16 +25,18 @@
   align-items: center; 
   text-align: center;
 }
+.preset-delete-button{
+  width: 25%;
+}
 .preset-delete-button:hover{
   color:red;
-  width: 5vw;
 }
 .selected-preset-button{
-  width: 15vw;
+  width: 75%;
   color:hotpink;
 }
 .unselected-preset-button{
-  width: 15vw;
+  width: 75%;
 }
 /*https://codepen.io/savwiley/pen/xxVRqXX*/
 .presets-search-bar {
@@ -48,11 +58,10 @@
     border: 2px solid rgba(255,255,255,0.5);
     background: linear-gradient(to left top, #000, #A64C79) fixed;
   }
-  .presets-list-container{
-    height: calc(52vh - 80px); 
-    overflow-y: scroll; 
-  }
+
   .overwrite-button{
     width: 100%;
-    height: 8vh;
+    height: 15%;
+    padding: 0px;
+    border: 0px;
   }

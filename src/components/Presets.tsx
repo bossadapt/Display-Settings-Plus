@@ -94,7 +94,7 @@ export const Presets: React.FC<PresetsProps> = ({ presets, setPresets, customMon
         }
     }
     return (<div style={{ width: "20vw", height: "100%" }} >
-        <div style={{ height: "80px" }}>
+        <div className="presets-top-container">
             <h2 className="mini-titles">Presets</h2>
             <div style={{ display: "flex", flexDirection: "row" }}>
                 <input className="presets-search-bar" type="text" value={presetSearchTerm} onChange={(eve) => { setPresetSearchTerm(eve.target.value) }} />

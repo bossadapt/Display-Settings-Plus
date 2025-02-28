@@ -1,3 +1,7 @@
+.settingsList{
+  display: flex;
+  flex-wrap: wrap;
+}
 .settingsContainer{
     border-style: inset;
     border-width: 2px;
@@ -12,6 +16,11 @@
     margin-bottom: 2vh;
     height: 95px;
 }
+@media screen and (min-width: 1600px){
+  .settingsContainer{
+    width: 46vw;
+  }
+}
 .mini-titles{
   width: 100%;
   text-align: center;
@@ -21,9 +30,9 @@
   margin-bottom: 5px;
 }
 .settingsDescriptonContainer{
-    width: 20vw;
-    margin-left: 5vw;
-    margin-right: 5vw;
+    width: 23%;
+    margin-left: 5%;
+    margin-right: 5%;
     margin-top: auto;
     margin-bottom: auto;
 
@@ -35,7 +44,7 @@
 .settingsEditorContainer{
     display: flex;
     display: row;
-    width: calc(80vw - 162px);
+    width: calc(77% - 162px);
 }
 .resetButton{
   height: 100%;

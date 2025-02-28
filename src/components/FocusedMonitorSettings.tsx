@@ -20,10 +20,8 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     //MANUAL ATTEMPT
     useEffect(() => {
         if (rerenderMonitorsContainerRef.current && (customMonitors !== lastStateWhenRerenderCalled.current || lastMonitorScaleWhenRerenderCalled.current !== monitorScale)) {
-            console.log('rerender internal');
             lastStateWhenRerenderCalled.current = [...customMonitors];
             lastMonitorScaleWhenRerenderCalled.current = monitorScale;
-            console.log(customMonitors);
             rerenderMonitorsContainerRef.current(customMonitors);
         }
     }, [customMonitors, monitorScale]);
@@ -37,11 +35,9 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
     //Enable
     ///used to disable the rest of the options:
     function setEnabled(monitors: FrontendMonitor[], focusedMonitorIdx: number, enabled: boolean): FrontendMonitor[] {
-        console.log("button enabled called");
         console.log(initialMonitors.current);
         console.log(customMonitors);
         if (enabled) {
-            console.log("enabled");
             //updating page state
             let modeXid = initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.xid;
             let modeWidth = initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.width;
@@ -79,7 +75,6 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                     : mon
             ))
         } else {
-            console.log("disabled");
             //what happens inside the xrandr library:
             /*
             self.x = 0;
@@ -147,9 +142,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             )
         );
     }
-    //TODO: fix picture not being resized
     function resetPosition(monitors: FrontendMonitor[], focusedMonitorIdx: number): FrontendMonitor[] {
-        console.log("Position reset called");
         console.log(initialMonitors.current);
         console.log(customMonitors);
         monitors = monitors.map((curMon, idx) => (idx === focusedMonitorIdx
@@ -244,7 +237,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             fontSize: 20
         })
     };
-    return (<div>
+    return (<div className="settingsList">
         <div className="settingsContainer">
             <div className="settingsDescriptonContainer">
                 <h2>Enabled:</h2>
@@ -264,12 +257,12 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             </div>
             <div className="settingsEditorContainer">
                 <div style={{ width: "50%", marginTop: "auto", marginBottom: "auto" }}>
-                    <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "15px" }}>X:</h2>
-                    <input style={{ width: "100%", borderRadius: "0px" }} disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} type="number" value={customMonitors[focusedMonitorIdx].x} onChange={(eve) => setPositionX(Number(eve.target.value))} />
+                    <h2 style={{ marginTop: "auto", marginBottom: "auto" }}>X:</h2>
+                    <input style={{ width: "100%", borderRadius: "0px", margin: 0 }} disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} type="number" value={customMonitors[focusedMonitorIdx].x} onChange={(eve) => setPositionX(Number(eve.target.value))} />
                 </div>
                 <div style={{ width: "50%", marginTop: "auto", marginBottom: "auto" }}>
-                    <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "15px" }}>Y:</h2>
-                    <input style={{ width: "100%", borderRadius: "0px" }} disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} type="number" value={customMonitors[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
+                    <h2 style={{ marginTop: "auto", marginBottom: "auto" }}>Y:</h2>
+                    <input style={{ width: "100%", borderRadius: "0px", margin: 0 }} disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} type="number" value={customMonitors[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
                 </div>
             </div>
             <button className="resetButton" disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} onClick={() => { resetPosition(customMonitors, focusedMonitorIdx) }}>Reset</button>

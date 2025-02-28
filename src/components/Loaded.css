@@ -1,16 +1,24 @@
 
 .loadedMain {
+    height: 100vh;
     display:flex;
     flex-direction: column;
   }
   .react-select{
 height: 150px;
 }
+
 .majorButtons{
   color: hotpink;
   font-size: 15px;
   height: 52px;
   border-color: white;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  border-bottom: 0px;
+}
+.majorButtons:hover{
+  border-bottom: 1px;
 }
 /* CSS from button people https://getcssscan.com/css-buttons-examples */
 button {
