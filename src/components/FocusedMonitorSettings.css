@@ -10,7 +10,7 @@
     margin-right: 2vw;
     margin-top: 2vh;
     margin-bottom: 2vh;
-    height: 15vh;
+    height: 95px;
 }
 .mini-titles{
   width: 100%;
@@ -35,13 +35,15 @@
 .settingsEditorContainer{
     display: flex;
     display: row;
-    margin: auto;
+    width: calc(80vw - 162px);
 }
 .resetButton{
   height: 100%;
+  margin-left: 10px;
   margin-right: 5px;
   margin-top: auto;
   margin-bottom: auto;
+  width: 152px;
   border-radius: 0 20px 20px 0;
 
 }
@@ -68,7 +70,13 @@ input[type="number"] {
     border: 2px solid rgba(255,255,255,0.5);
     background: linear-gradient(to left top, #000, #4e2d69) fixed;
   }
-
+@media screen and (min-width: 1000px){
+  input[type="number"] {
+    width: 150px;
+    height: 75 px;
+    font-size: 25px;
+  }
+}
 
 
 
@@ -80,6 +88,13 @@ input[type="number"] {
 
 
   /* */
+
+  .enable-container{
+    display: flex;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+  }
   input[type="checkbox"] {
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -97,10 +112,10 @@ input[type="number"] {
     width: 150px;
     display: inline-block;
     position: relative;
-    margin: 0;
     border: 2px solid #474755;
     background: linear-gradient(180deg, #2D2F39 0%, #1F2027 100%);
     transition: all 0.2s ease;
+    margin: auto;
   }
   
   .toggle:after {

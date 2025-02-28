@@ -3,7 +3,7 @@ import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics
 import { useState, useRef, Dispatch, SetStateAction, MutableRefObject, useEffect } from 'react';
 import { FrontendMonitor, point, point as Point, Rotation } from '../globalValues';
 import { convertFileSrc } from '@tauri-apps/api/core';
-
+import './FreeHandPosition.css';
 
 interface FreeHandPositionProps {
     initialMonitors: MutableRefObject<FrontendMonitor[]>;
@@ -45,10 +45,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
 
         appLocal.stage.on('pointerup', onDragEnd);
         appLocal.stage.on('pointerupoutside', onDragEnd);
-        //TODO: maybe make it scalable by turning monitorScale into a useRef
-        //https://pixijs.download/dev/docs/events.FederatedWheelEvent.html
-        //appLocal.stage.on("wheelcapture", onWheelChange)
-        //appLocal.stage.on('wheel')
+
         app.current = appLocal;
 
     }
@@ -507,14 +504,14 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
                 onContextMenu={(e) => { e.preventDefault(); }}
             ></canvas>
             <div style={{ width: "20vw", height: "60vh" }}>
-                <button style={{ width: "20vw", height: "10vh" }} onClick={resetMonitorsPositions}>Reset Monitor Positions</button>
-                <button style={{ width: "20vw", height: "10vh" }} onClick={resetCameraPosition}>Reset Camera Position</button>
-                <button style={{ width: "20vw", height: "10vh" }} onClick={() => normalizePositions(customMonitorsRef.current)}>Normalize Positions</button>
-                <button style={{ marginBottom: "auto", width: "20vw", height: "10vh", color: snapEnabled ? 'hotpink' : '#3B3B3B' }} onClick={toggleSnap}>Toggle Snap</button>
+                <button className='freehand-function-buttons' onClick={resetMonitorsPositions}>Reset Monitor Positions</button>
+                <button className='freehand-function-buttons' onClick={resetCameraPosition}>Reset Camera Position</button>
+                <button className='freehand-function-buttons' onClick={() => normalizePositions(customMonitorsRef.current)}>Normalize Positions</button>
+                <button className='freehand-function-buttons' style={{ marginBottom: "auto", color: snapEnabled ? 'hotpink' : '#3B3B3B' }} onClick={toggleSnap}>Toggle Snap</button>
                 <h3 className='mini-titles' style={{ height: "5vh", alignContent: "end" }}>Scale</h3>
-                <div style={{ height: "10vh", display: "flex", flexDirection: "row", justifyContent: "center" }}>
-                    <h1 style={{ marginTop: "auto", marginBottom: "auto" }}>1:</h1>
-                    <input style={{ marginTop: "auto", marginBottom: "auto", width: "9vw" }} type="number" onChange={(eve) => {
+                <div className='scale-container'>
+                    <h1 className='scale-base-text'>1:</h1>
+                    <input className='scale-input' type="number" onChange={(eve) => {
                         let newMonitorScale = Number(eve.target.value);
                         if (newMonitorScale > 0) {
                             setMonitorScale(newMonitorScale);

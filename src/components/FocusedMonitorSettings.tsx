@@ -235,18 +235,27 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
             ? { ...initialMonitors.current[focusedMonitorIdx] } : custMon))));
 
     }
+    //Styles
+    const customStyles = {
+        control: (base: any) => ({
+            ...base,
+            height: 53,
+            minHeight: 53,
+            fontSize: 20
+        })
+    };
     return (<div>
         <div className="settingsContainer">
             <div className="settingsDescriptonContainer">
                 <h2>Enabled:</h2>
             </div>
             <div className="settingsEditorContainer">
-                <label>
+                <label className="enable-container">
                     <input type="checkbox" checked={customMonitors[focusedMonitorIdx].outputs[0].enabled} onChange={() => { setEnabled(customMonitors, focusedMonitorIdx, !customMonitors[focusedMonitorIdx].outputs[0].enabled) }} />
                     <div className="toggle"></div>
                 </label>
             </div>
-            <button style={{ width: "95px" }} className="resetButton" disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} onClick={resetAllFocused}>Reset<br></br>Monitor</button>
+            <button className="resetButton" disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} onClick={resetAllFocused}>Reset<br></br>Monitor</button>
 
         </div>
         <div className="settingsContainer">
@@ -254,10 +263,14 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                 <h2>Position:</h2>
             </div>
             <div className="settingsEditorContainer">
-                <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "-10px" }}>X:</h2>
-                <input disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} type="number" value={customMonitors[focusedMonitorIdx].x} onChange={(eve) => setPositionX(Number(eve.target.value))} />
-                <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "10px" }}>Y:</h2>
-                <input disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} type="number" value={customMonitors[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
+                <div style={{ width: "50%", marginTop: "auto", marginBottom: "auto" }}>
+                    <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "15px" }}>X:</h2>
+                    <input style={{ width: "100%", borderRadius: "0px" }} disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} type="number" value={customMonitors[focusedMonitorIdx].x} onChange={(eve) => setPositionX(Number(eve.target.value))} />
+                </div>
+                <div style={{ width: "50%", marginTop: "auto", marginBottom: "auto" }}>
+                    <h2 style={{ marginTop: "auto", marginBottom: "auto", marginLeft: "15px" }}>Y:</h2>
+                    <input style={{ width: "100%", borderRadius: "0px" }} disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} type="number" value={customMonitors[focusedMonitorIdx].y} onChange={(eve) => setPositionY(Number(eve.target.value))} />
+                </div>
             </div>
             <button className="resetButton" disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} onClick={() => { resetPosition(customMonitors, focusedMonitorIdx) }}>Reset</button>
 
@@ -267,9 +280,11 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                 <h2>Rotation:</h2>
             </div>
             <div className="settingsEditorContainer">
-                <Select isDisabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} options={rotationOptions} onChange={(eve) => { changeRotation(eve?.value) }} value={rotationOptions.find((rot) =>
-                    (rot.value === customMonitors[focusedMonitorIdx].outputs[0].rotation)
-                )} theme={customSelectTheme}></Select>
+                <div style={{ margin: "auto" }}>
+                    <Select styles={customStyles} isDisabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} options={rotationOptions} onChange={(eve) => { changeRotation(eve?.value) }} value={rotationOptions.find((rot) =>
+                        (rot.value === customMonitors[focusedMonitorIdx].outputs[0].rotation)
+                    )} theme={customSelectTheme}></Select>
+                </div>
             </div>
             <button className="resetButton" disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} onClick={() => { resetRotation(customMonitors, focusedMonitorIdx) }}>Reset</button>
 
@@ -279,23 +294,22 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                 <h2>Mode:</h2>
             </div>
             <div className="settingsEditorContainer">
-                <h2 style={{ marginLeft: "-5px", marginTop: "auto", marginBottom: "auto" }}>Ratio:</h2>
-                <Select isDisabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} options={modeRatioOptions} onChange={(eve) => {
-                    if (eve) {
-                        console.log("set eve.label to:", eve.label);
-                        setFocusedModeRatio(eve.label)
-                    }
-                }} value={modeRatioOptions.find((option) => {
-                    return option.value === customMonitors[focusedMonitorIdx].outputs[0].currentMode!.name;
-                })} theme={customSelectTheme}></Select>
-                <h2 style={{ marginLeft: "10px", marginTop: "auto", marginBottom: "auto" }}>Rate:</h2>
-                <Select isDisabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} options={modeFPSOptions} onChange={(eve) => changeModePreset(eve?.value)} value={modeFPSOptions.find((option) => {
-                    // console.log("RAN Rate VALUE CODE:")
-                    // console.log(option.value);
-                    // console.log(customMonitors[focusedMonitorIdx].outputs[0].currentMode);
-                    // console.log(option.value === customMonitors[focusedMonitorIdx].outputs[0].currentMode);
-                    return option.value.xid === customMonitors[focusedMonitorIdx].outputs[0].currentMode?.xid;
-                })} theme={customSelectTheme}></Select>
+                <div style={{ width: "50%", marginTop: "auto", marginBottom: "auto" }}>
+                    <h2 style={{ marginLeft: "auto", marginTop: "auto", marginBottom: "auto" }}>Ratio:</h2>
+                    <Select isDisabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} options={modeRatioOptions} onChange={(eve) => {
+                        if (eve) {
+                            setFocusedModeRatio(eve.label)
+                        }
+                    }} value={modeRatioOptions.find((option) => {
+                        return option.value === customMonitors[focusedMonitorIdx].outputs[0].currentMode!.name;
+                    })} theme={customSelectTheme}></Select>
+                </div>
+                <div style={{ width: "50%", marginTop: "auto", marginBottom: "auto" }}>
+                    <h2 style={{ marginLeft: "auto", marginTop: "auto", marginBottom: "auto" }}>Rate:</h2>
+                    <Select isDisabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} options={modeFPSOptions} onChange={(eve) => changeModePreset(eve?.value)} value={modeFPSOptions.find((option) => {
+                        return option.value.xid === customMonitors[focusedMonitorIdx].outputs[0].currentMode?.xid;
+                    })} theme={customSelectTheme}></Select>
+                </div>
             </div>
             <button className="resetButton" disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled} onClick={() => { resetModePreset(customMonitors, focusedMonitorIdx) }}>Reset</button>
 
