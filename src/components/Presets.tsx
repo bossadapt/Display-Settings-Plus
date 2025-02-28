@@ -33,8 +33,9 @@ export const Presets: React.FC<PresetsProps> = ({ presets, setPresets, customMon
         setFocusedPresetValue(preset);
     }
     function overwriteFocusedPreset() {
-        if (focusedPresetValue) {
-            let newMonitors = normalizePositionsRef.current ? normalizePositionsRef.current(customMonitors) : customMonitors;
+        if (focusedPresetValue && normalizePositionsRef.current) {
+            let normalizedMonitors = normalizePositionsRef.current(customMonitors);
+            let newMonitors = normalizedMonitors.map((mon) => ({ ...mon, x: Number(mon.x.toFixed(0)), y: Number(mon.y.toFixed(0)) }))
             let newPreset = { name: focusedPresetValue.name, monitors: newMonitors };
             setShowSimplePopUp(true);
             setSimplePopUpReason("Overwriting Preset");
@@ -93,24 +94,24 @@ export const Presets: React.FC<PresetsProps> = ({ presets, setPresets, customMon
         }
     }
     return (<div style={{ width: "20vw", height: "100%" }} >
-        <div style={{ height: "12vh" }}>
-            <h3 className="mini-titles">Presets</h3>
+        <div style={{ height: "80px" }}>
+            <h2 className="mini-titles">Presets</h2>
             <div style={{ display: "flex", flexDirection: "row" }}>
                 <input className="presets-search-bar" type="text" value={presetSearchTerm} onChange={(eve) => { setPresetSearchTerm(eve.target.value) }} />
                 <button className="presets-add-button" onClick={createPreset}>+</button>
             </div>
         </div>
         <hr />
-        <div style={{ height: "37vh", overflowY: "scroll" }}>
+        <div className="presets-list-container">
             {presets.filter((preset) => (preset.name.includes(presetSearchTerm))).sort((a, b) => (a.name > b.name ? 1 : -1)).map((preset) => (
                 <div key={preset.name} style={{ display: "flex", flexDirection: "row" }}>
-                    <button style={{ width: "15vw" }} className={focusedPresetValue && focusedPresetValue.name === preset.name ? "selected-preset-button" : ""} onClick={() => setFocusedPreset(preset)}>{preset.name}</button>
-                    <button style={{ width: "5vw" }} className="preset-delete-button" onClick={() => deletePreset(preset.name)}>X</button>
+                    <button className={focusedPresetValue && focusedPresetValue.name === preset.name ? "selected-preset-button" : "unselected-preset-button"} onClick={() => setFocusedPreset(preset)}>{preset.name}</button>
+                    <button className="preset-delete-button" onClick={() => deletePreset(preset.name)}>X</button>
                 </div>
             ))}
         </div>
         <hr />
-        <button onClick={overwriteFocusedPreset}>Overwrite Preset</button>
+        <button className="overwrite-button" onClick={overwriteFocusedPreset}>Overwrite Preset</button>
     </div>);
 }
 export default Presets;

@@ -316,8 +316,8 @@ async fn quick_apply(monitors: Vec<MiniMonitor>) -> Result<Vec<Option<u64>>, Xra
     let mut crtc_ids: Vec<Option<u64>> = Vec::new();
     let res = ScreenResources::new(&mut xhandle).unwrap();
     let crtcs = res.crtcs(&mut xhandle)?;
-
     let outputs = res.outputs(&mut xhandle, Some(&crtcs), &res)?;
+    println!("{:#?}", monitors);
     for current_monitor in monitors {
         let current_output = outputs
             .iter()

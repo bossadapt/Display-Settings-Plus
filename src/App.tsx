@@ -12,7 +12,7 @@ function App() {
   const initialMonitorsInfo = useRef<FrontendMonitor[]>([]);
   const outputNames = useRef<String[]>([]);
   const [presets, setPresets] = useState<Preset[]>([]);
-  const [showSingleError, setShowSingleError] = useState(true);
+  const [showSingleError, setShowSingleError] = useState(false);
   const [singleErrorText, setSingleErrorText] = useState("Failed due to blah blah blahblahblahblahblahblah blah blah blah blah blah blah blah blah");
   const singleErrorProps: SingleError = {
     showSingleError,
@@ -29,9 +29,16 @@ function App() {
       return;
     }
     didInit.current = true;
-    getPresets();
-    refreshMonitors();
+    init();
+
   }, []);
+  //TODO: Clean UI
+  //TODO: Write Read Me
+
+  async function init() {
+    await refreshMonitors();
+    await getPresets();
+  }
   // grabs monitors and updates screenshots
   async function refreshMonitors() {
     console.log("init called");

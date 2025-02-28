@@ -1,7 +1,7 @@
 import { Application, Container, ContainerChild, FederatedPointerEvent, Graphics, ICanvas, BitmapText, Sprite, Assets } from 'pixi.js';
 
 import { useState, useRef, Dispatch, SetStateAction, MutableRefObject, useEffect } from 'react';
-import { FrontendMonitor, point as Point, Rotation } from '../globalValues';
+import { FrontendMonitor, point, point as Point, Rotation } from '../globalValues';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
 
@@ -18,6 +18,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
     const dragTarget = useRef<null | Container<ContainerChild>>(null)
     const screenDragActive = useRef(false);
     const screenDragOffsetTotal = useRef<Point>({ x: 0, y: 0 });
+    const customMonitorsRef = useRef<FrontendMonitor[]>([...customMonitors]);
+    const monitorScaleRef = useRef<number>(10);
     const initialDragX = useRef(0);
     const initialDragY = useRef(0);
     const previousMonitorOffset = useRef<Point>({ x: 0, y: 0 });
@@ -50,30 +52,20 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         app.current = appLocal;
 
     }
-
-    // function onWheelChange(eve: FederatedWheelEvent) {
-    //     console.log("scroll wheen unit:" + eve.deltaY);
-    //     if (eve.deltaY > 0) {
-    //         monitorScale.current = monitorScale.current + 1;
-
-    //     } else {
-    //         monitorScale.current = monitorScale.current - 1;
-
-    //     }
-    //     rerenderMonitors(customMonitors);
-    // }
     function updateGlobalPosition(monitorName: string, x: number, y: number) {
-        setCustMonitors((mons) =>
-            mons.map((curMon) =>
-                curMon.name === monitorName
-                    ? { ...curMon, y: Math.trunc(Math.ceil(y)), x: Math.trunc(Math.ceil(x)) }
-                    : curMon
-            )
-        );
+        console.log("setting x:", x, "y:", y);
+        customMonitorsRef.current = customMonitorsRef.current.map((curMon) =>
+            curMon.name === monitorName
+                ? { ...curMon, y: Math.trunc(y), x: Math.trunc(x) }
+                : curMon
+        )
+        setCustMonitors(customMonitorsRef.current);
+
     }
     async function rerenderMonitors(newMonitors: FrontendMonitor[]) {
         if (app.current) {
             console.log("rerender called");
+            customMonitorsRef.current = [...newMonitors];
             //deletion
             //app.current!.stage.children.forEach((child) => { child.children.forEach((child) => { child.destroy() }) });
             app.current!.stage.children = [];
@@ -83,8 +75,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             for (let i = 0; i < newMonitors.length; i++) {
                 app.current!.stage.addChild(await createMonitorContainer(newMonitors[i]));
             }
-            console.log("done");
-            console.log(app.current!.stage.children);
 
         } else {
             console.log("app not built yet, unable to rerender");
@@ -94,10 +84,11 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         // Container
         const monitorContainer = new Container();
         monitorContainer.isRenderGroup = true;
-        monitorContainer.x = monitor.x / monitorScale + screenDragOffsetTotal.current.x;
-        monitorContainer.y = monitor.y / monitorScale + screenDragOffsetTotal.current.y;
+        monitorContainer.x = (monitor.x / monitorScale) + screenDragOffsetTotal.current.x;
+        monitorContainer.y = (monitor.y / monitorScale) + screenDragOffsetTotal.current.y;
         monitorContainer.label = monitor.name;
         monitorContainer.cursor = 'pointer';
+        monitorScaleRef.current = monitorScale;
         const monitorGraphic = new Graphics();
         const monitorText = new BitmapText();
         const textBackgroundGraphic = new Graphics();
@@ -109,18 +100,16 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         if (monitor.outputs[0].enabled) {
             monitorContainer.eventMode = 'static';
         } else {
-            console.log("DISABLED ON FREEHANDTSX")
-            console.log(monitor);
             monitorContainer.eventMode = 'none';
             monitorContainer.alpha = 0;
         }
         //square
-        let monitorWidth = monitor.outputs[0].currentMode!.width / monitorScale;
-        let monitorHeight = monitor.outputs[0].currentMode!.height / monitorScale;
+        let monitorWidth = (monitor.outputs[0].currentMode!.width / monitorScale);
+        let monitorHeight = (monitor.outputs[0].currentMode!.height / monitorScale);
         //handle monitors being sideways
         if (monitor.outputs[0].rotation === Rotation.Left || monitor.outputs[0].rotation === Rotation.Right) {
-            monitorWidth = monitor.outputs[0].currentMode!.height / monitorScale;
-            monitorHeight = monitor.outputs[0].currentMode!.width / monitorScale;
+            monitorWidth = (monitor.outputs[0].currentMode!.height / monitorScale);
+            monitorHeight = (monitor.outputs[0].currentMode!.width / monitorScale);
         }
         console.log("Width:,", monitorWidth, "Height:", monitorHeight);
 
@@ -131,9 +120,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         //Screenshot
         let monitorScreenshotSprite: Sprite | undefined;
         if (monitor.imgSrc) {
-            console.log(monitor.imgSrc);
             let path = convertFileSrc(monitor.imgSrc);
-            console.log(path);
             let texture = await Assets.load(path);
             monitorScreenshotSprite = new Sprite(texture);
 
@@ -172,7 +159,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
                 textBackgroundGraphic.rect(monitorText.x, monitorText.y, monitorText.width, monitorText.height);
 
         }
-        console.log(monitorText.x, "|", monitorText.y, "|", monitorText.width, "|", monitorText.height, "|", monitorText.scale.x, monitorText.scale.y);
         textBackgroundGraphic.fillStyle = 'black'
         textBackgroundGraphic.fill();
 
@@ -184,14 +170,19 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         }
         monitorContainer.addChild(textBackgroundGraphic);
         monitorContainer.addChild(monitorText);
+        monitorContainer.setSize(monitorWidth, monitorHeight);
         return monitorContainer;
     }
+
+
     function onScreenDragStart(eve: FederatedPointerEvent) {
         screenDragActive.current = true;
         previousScreenOffset.current.x = eve.globalX;
         previousScreenOffset.current.y = eve.globalY;
         app.current!.stage.on('pointermove', onScreenMove);
     }
+
+
     function onScreenMove(eve: FederatedPointerEvent) {
         let difX = eve.globalX - previousScreenOffset.current.x;
         let difY = eve.globalY - previousScreenOffset.current.y;
@@ -234,79 +225,191 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
         app.current!.stage.on('pointermove', onDragMove);
     }
 
+    function convertContainerPoints2MonitorPoints(x: number, y: number): point {
+        return { x: (x - screenDragOffsetTotal.current.x) * monitorScaleRef.current, y: (y - screenDragOffsetTotal.current.y) * monitorScaleRef.current };
+    }
     ///Generates 8 points
-    /// Top left, Top Middle, Top Right
-    /// Left Middle , Right Middle
-    //  Bottom Left, Bottome Middle, Bottom Right
-    function container2Points(monitor: Container): Point[] {
+    function container2Points(monitor: Container): PointAndSource[] {
+        //scaling it back to monitors to compare against monitors, 
+        // so it can be snapped without loss of converting back and forth
+        let { x: xScaled, y: yScaled } = convertContainerPoints2MonitorPoints(monitor.x, monitor.y);
+        let heightScaled = monitor.height * monitorScaleRef.current;
+        let widthScaled = monitor.width * monitorScaleRef.current;
+
         //handling redundant math
-        let middleX = monitor.x + (monitor.width / 2);
-        let middleY = monitor.y + (monitor.height / 2);
-        let right = monitor.x + monitor.width;
-        let bottom = monitor.y + monitor.height;
+        let middleX = xScaled + (widthScaled / 2);
+        let middleY = yScaled + (heightScaled / 2);
+        let right = xScaled + widthScaled;
+        let bottom = yScaled + heightScaled;
         return [
             // Top left
-            { x: monitor.x, y: monitor.y },
-            // Top Middle
-            { x: middleX, y: monitor.y },
-            // Top Right
-            { x: right, y: monitor.y },
-            //Left Middle
-            { x: monitor.x, y: middleY },
-            //Right Middle
-            { x: right, y: middleY },
-            //Bottom Left
-            { x: monitor.x, y: bottom },
-            //Bottom Middle
-            { x: middleX, y: bottom },
-            //Bottom Right
-            { x: right, y: bottom }
+            { monitorName: monitor.label, x: xScaled, y: yScaled, pointRelative: PointRelative.TopLeft },
+            { monitorName: monitor.label, x: middleX, y: yScaled, pointRelative: PointRelative.TopMiddle },
+            { monitorName: monitor.label, x: right, y: yScaled, pointRelative: PointRelative.TopRight },
+            { monitorName: monitor.label, x: xScaled, y: middleY, pointRelative: PointRelative.MiddleLeft },
+            { monitorName: monitor.label, x: right, y: middleY, pointRelative: PointRelative.MiddleRight },
+            { monitorName: monitor.label, x: xScaled, y: bottom, pointRelative: PointRelative.BottomLeft },
+            { monitorName: monitor.label, x: middleX, y: bottom, pointRelative: PointRelative.BottomMiddle },
+            { monitorName: monitor.label, x: right, y: bottom, pointRelative: PointRelative.BottomRight }
 
         ];
     }
+    enum PointRelative {
+        TopLeft,
+        TopMiddle,
+        TopRight,
+        MiddleLeft,
+        MiddleRight,
+        BottomLeft,
+        BottomMiddle,
+        BottomRight
+    }
+    interface PointAndSource {
+        monitorName: String,
+        x: number,
+        y: number,
+        pointRelative: PointRelative
+    }
+    function monitor2Points(monitor: FrontendMonitor): PointAndSource[] {
+        //handle rotation
+        let monitorWidth = monitor.outputs[0].currentMode!.width;
+        let monitorHeight = monitor.outputs[0].currentMode!.height;
+        if (monitor.outputs[0].rotation === Rotation.Left || monitor.outputs[0].rotation === Rotation.Right) {
+            monitorWidth = monitor.outputs[0].currentMode!.height;
+            monitorHeight = monitor.outputs[0].currentMode!.width;
+        }
+        //handle redundant math
+        let middleX = monitor.x + (monitorWidth / 2);
+        let middleY = monitor.y + (monitorHeight / 2);
+        let right = monitor.x + monitor.widthPx;
+        let top = monitor.y;
+        let bottom = monitor.y + monitor.heightPx;
+        let left = monitor.x;
+        return [
+            { monitorName: monitor.name, x: left, y: top, pointRelative: PointRelative.TopLeft },
+            { monitorName: monitor.name, x: middleX, y: top, pointRelative: PointRelative.TopMiddle },
+            { monitorName: monitor.name, x: right, y: top, pointRelative: PointRelative.TopRight },
+            { monitorName: monitor.name, x: left, y: middleY, pointRelative: PointRelative.MiddleLeft },
+            { monitorName: monitor.name, x: right, y: middleY, pointRelative: PointRelative.MiddleRight },
+            { monitorName: monitor.name, x: left, y: bottom, pointRelative: PointRelative.BottomLeft },
+            { monitorName: monitor.name, x: middleX, y: bottom, pointRelative: PointRelative.BottomMiddle },
+            { monitorName: monitor.name, x: right, y: bottom, pointRelative: PointRelative.BottomRight }
+
+        ];
+    }
+
     interface pointDiff {
-        difX: number,
-        difY: number,
+        drop: PointAndSource,
+        target: PointAndSource
         absDifTotal: number
     }
-    function points2PointDiff(dropPoints: Point[], targetPoints: Point[]): pointDiff[] {
+    function points2PointDiff(dropPoints: PointAndSource[], targetPoints: PointAndSource[]): pointDiff[] {
         let output: pointDiff[] = [];
         for (let dropPointIndex = 0; dropPointIndex < dropPoints.length; dropPointIndex++) {
             for (let targetPointIndex = 0; targetPointIndex < targetPoints.length; targetPointIndex++) {
-                let difX = targetPoints[targetPointIndex].x - dropPoints[dropPointIndex].x;
-                let difY = targetPoints[targetPointIndex].y - dropPoints[dropPointIndex].y;
+                let drop = dropPoints[dropPointIndex];
+                let target = targetPoints[targetPointIndex]
+                let difX = target.x - drop.x;
+                let difY = target.y - drop.y;
                 output.push({
-                    difX,
-                    difY,
+                    drop,
+                    target,
                     absDifTotal: Math.abs(difX) + Math.abs(difY)
                 });
             }
         }
         return output;
     }
+    function relative2offset(monitorName: String, relative: PointRelative): point {
+        let monitor = customMonitorsRef.current.find((mon) => (mon.name === monitorName));
+        if (monitor) {
+            let monitorWidth = monitor.outputs[0].currentMode!.width;
+            let monitorHeight = monitor.outputs[0].currentMode!.height;
+            if (monitor.outputs[0].rotation === Rotation.Left || monitor.outputs[0].rotation === Rotation.Right) {
+                monitorWidth = monitor.outputs[0].currentMode!.height;
+                monitorHeight = monitor.outputs[0].currentMode!.width;
+            }
+            //handle redundant math
+            let middleX = (monitorWidth / 2);
+            let middleY = (monitorHeight / 2);
+            let right = monitorWidth;
+            let bottom = monitorHeight;
+            switch (relative) {
+                case PointRelative.TopMiddle:
+                    return { x: middleX, y: 0 };
+                case PointRelative.TopRight:
+                    return { x: right, y: 0 };
+                case PointRelative.MiddleLeft:
+                    return { x: 0, y: middleY };
+                case PointRelative.MiddleRight:
+                    return { x: right, y: middleY, };
+                case PointRelative.BottomLeft:
+                    return { x: 0, y: bottom, };
+                case PointRelative.BottomMiddle:
+                    return { x: middleX, y: bottom, };
+                case PointRelative.BottomRight:
+                    return { x: right, y: bottom };
+                default:
+                    return { x: 0, y: 0 };
+            }
 
+        } else {
+            console.log("failed to find monitor during drag drop snap");
+            return ({ x: 0, y: 0 })
+        }
+    }
+
+    function snap(difToSnap: pointDiff) {
+        if (dragTarget.current) {
+            let offset = relative2offset(dragTarget.current.label, difToSnap.drop.pointRelative)
+            let x = difToSnap.target.x - offset.x;
+            let y = difToSnap.target.y - offset.y;
+            //convert the part that snapped to the top left
+            updateGlobalPosition(dragTarget.current.label, x, y)
+        } else {
+            console.error("tried to snap on a undefined dragtarget")
+        }
+    }
     function onDragEnd() {
         if (dragTarget.current && app.current) {
             if (snapEnabledRef.current) {
                 let dropPoints = container2Points(dragTarget.current);
-                let lowestDif: pointDiff = { difX: 0, difY: 0, absDifTotal: Number.MAX_VALUE };
-                for (let i = 0; i < app.current.stage.children.length; i++) {
-                    if (app.current.stage.children[i] == dragTarget.current) {
+                //handle single monitors here
+                let lowestDif: pointDiff = {
+                    drop: {
+                        monitorName: dragTarget.current.label,
+                        x: dragTarget.current.x * monitorScaleRef.current,
+                        y: dragTarget.current.y * monitorScaleRef.current,
+                        pointRelative: PointRelative.TopLeft
+                    },
+                    target: {
+                        monitorName: dragTarget.current.label,
+                        x: dragTarget.current.x * monitorScaleRef.current,
+                        y: dragTarget.current.y * monitorScaleRef.current,
+                        pointRelative: PointRelative.TopLeft
+                    },
+                    absDifTotal: Number.MAX_VALUE
+                };
+                dragTarget.current.label
+                for (let i = 0; i < customMonitorsRef.current.length; i++) {
+                    let focusedMonitor = customMonitorsRef.current[i];
+                    if (focusedMonitor.name == dragTarget.current.label || !focusedMonitor.outputs[0].enabled) {
                         continue;
                     }
-                    let currentDifCollection = points2PointDiff(dropPoints, container2Points(app.current.stage.children[i]));
+                    let currentDifCollection = points2PointDiff(dropPoints, monitor2Points(focusedMonitor));
                     for (let difIndex = 0; difIndex < currentDifCollection.length; difIndex++) {
                         if (currentDifCollection[difIndex].absDifTotal < lowestDif.absDifTotal) {
                             lowestDif = currentDifCollection[difIndex];
                         }
                     }
                 }
-                console.log("Lowest: ", lowestDif);
-                dragTarget.current.x += lowestDif.difX;
-                dragTarget.current.y += lowestDif.difY;
+                console.log("loweset dif");
+                console.log(lowestDif);
+                snap(lowestDif);
+            } else {
+                let { x: xScaled, y: yScaled } = convertContainerPoints2MonitorPoints(dragTarget.current.x, dragTarget.current.y);
+                updateGlobalPosition(dragTarget.current.label, xScaled, yScaled);
             }
-            updateGlobalPosition(dragTarget.current.label, (dragTarget.current.x - screenDragOffsetTotal.current.x) * monitorScale, (dragTarget.current.y - screenDragOffsetTotal.current.y) * monitorScale);
-
             dragTarget.current.alpha = 1;
             dragTarget.current = null;
 
@@ -327,8 +430,8 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
     function resetMonitorsPositions() {
         if (app.current) {
             app.current!.stage.children.forEach(((mon, idx) => {
-                mon.x = initialMonitors.current[idx].x / monitorScale;
-                mon.y = initialMonitors.current[idx].y / monitorScale;
+                mon.x = Math.trunc(initialMonitors.current[idx].x / monitorScale);
+                mon.y = Math.trunc(initialMonitors.current[idx].y / monitorScale);
             }));
         }
         setCustMonitors((mons) => mons.map((curMon, idx) => ({ ...curMon, x: initialMonitors.current[idx].x, y: initialMonitors.current[idx].y })));
@@ -351,11 +454,13 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             let minOffsetX = Number.MAX_VALUE;
             //find the smallest offsets
             app.current.stage.children.forEach((mon) => {
-                if (mon.x < minOffsetX) {
-                    minOffsetX = mon.x;
-                }
-                if (mon.y < minOffsetY) {
-                    minOffsetY = mon.y;
+                if (mon.alpha != 0) {
+                    if (mon.x < minOffsetX) {
+                        minOffsetX = mon.x;
+                    }
+                    if (mon.y < minOffsetY) {
+                        minOffsetY = mon.y;
+                    }
                 }
             })
             if (minOffsetX == Number.MAX_VALUE) {
@@ -363,12 +468,14 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
                 return monitors;
             }
             //revert the offset to normalize
-            let newMonitors = [...customMonitors];
+            let newMonitors = [...monitors];
             app.current.stage.children.forEach((mon, idx) => {
-                mon.x -= minOffsetX;
-                mon.y -= minOffsetY;
-                newMonitors[idx].x = mon.x * monitorScale;
-                newMonitors[idx].y = mon.y * monitorScale;
+                if (mon.alpha != 0) {
+                    mon.x -= minOffsetX;
+                    mon.y -= minOffsetY;
+                    newMonitors[idx].x = Math.trunc(mon.x * monitorScale);
+                    newMonitors[idx].y = Math.trunc(mon.y * monitorScale);
+                }
             });
             setCustMonitors((oldMons) => (oldMons.map((mon, idx) => ({
                 ...mon,
@@ -402,7 +509,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({ initialMonit
             <div style={{ width: "20vw", height: "60vh" }}>
                 <button style={{ width: "20vw", height: "10vh" }} onClick={resetMonitorsPositions}>Reset Monitor Positions</button>
                 <button style={{ width: "20vw", height: "10vh" }} onClick={resetCameraPosition}>Reset Camera Position</button>
-                <button style={{ width: "20vw", height: "10vh" }} onClick={() => normalizePositions(customMonitors)}>Normalize Positions</button>
+                <button style={{ width: "20vw", height: "10vh" }} onClick={() => normalizePositions(customMonitorsRef.current)}>Normalize Positions</button>
                 <button style={{ marginBottom: "auto", width: "20vw", height: "10vh", color: snapEnabled ? 'hotpink' : '#3B3B3B' }} onClick={toggleSnap}>Toggle Snap</button>
                 <h3 className='mini-titles' style={{ height: "5vh", alignContent: "end" }}>Scale</h3>
                 <div style={{ height: "10vh", display: "flex", flexDirection: "row", justifyContent: "center" }}>

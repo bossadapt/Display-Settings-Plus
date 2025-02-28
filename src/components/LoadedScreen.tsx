@@ -154,7 +154,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({ singleErrorProps, monitorR
         <button className="majorButtons" onClick={massApply}>Mass Apply</button>
         <button className="majorButtons" onClick={applyAll}>Safe Apply</button>
       </div>
-      <hr style={{ marginTop: "5px", marginBottom: "5px" }} />
+      <hr style={{ marginBottom: "5px" }} />
       <div style={{ display: "flex", flexDirection: "row" }}>
         <h2 style={{ color: "white", marginLeft: "10px", marginTop: "auto", marginBottom: "auto", marginRight: "20px" }}>Primary Monitor:</h2>
         <Select styles={customStyles} onChange={(eve) => setPrimaryMonitor(eve?.value)} value={monitorOptions[customMonitors.findIndex((mon) => { return (mon.isPrimary == true) })]} options={monitorOptions} theme={customSelectTheme}></Select>

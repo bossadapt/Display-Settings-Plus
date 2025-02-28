@@ -43,6 +43,17 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
         if (enabled) {
             console.log("enabled");
             //updating page state
+            let modeXid = initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.xid;
+            let modeWidth = initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.width;
+            let modeHeight = initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.height;
+            //if was previously disabled and saved(ot ensure the diabled mode does not get pushed again)
+            if (modeXid === 0) {
+                console.log("tried to push a diabled, but was corrected")
+                let preferredMode = initialMonitors.current[focusedMonitorIdx].outputs[0].preferredModes[0];
+                modeXid = preferredMode.xid;
+                modeWidth = preferredMode.width;
+                modeHeight = preferredMode.height;
+            }
             monitors = monitors.map((mon, idx) => (
                 idx === focusedMonitorIdx
                     ? {
@@ -57,9 +68,9 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                                     rotation: initialMonitors.current[focusedMonitorIdx].outputs[0].rotation,
                                     currentMode: {
                                         ...out.currentMode,
-                                        xid: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.xid,
-                                        width: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.width,
-                                        height: initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!.height,
+                                        xid: modeXid,
+                                        width: modeWidth,
+                                        height: modeHeight,
                                     }
                                 }
                                 : out
@@ -91,8 +102,8 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = (
                                     enabled: false,
                                     currentMode: {
                                         ...out.currentMode,
-                                        width: initialMonitors.current[focusedMonitorIdx].widthPx,
-                                        height: initialMonitors.current[focusedMonitorIdx].heightPx,
+                                        width: 0,
+                                        height: 0,
                                         xid: 0
                                     }
                                 }
