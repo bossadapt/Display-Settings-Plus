@@ -19,10 +19,7 @@ pub use crate::mode::Mode;
 pub use crate::monitor::Monitor;
 use crate::monitor::MonitorHandle;
 pub use crate::screensize::ScreenSize;
-pub use output::{
-    property::{Property, Range, Ranges, Supported, Value, Values},
-    Output,
-};
+pub use output::Output;
 
 mod crtc;
 mod mode;
@@ -169,7 +166,10 @@ impl XHandle {
     ///
     pub fn disable(&mut self, output: &Output, res: &ScreenResources) -> Result<(), XrandrError> {
         let crtc_id = match output.crtc {
-            None => return Ok(()),
+            None => {
+                println!("monitor was already disabled");
+                return Ok(());
+            }
             Some(xid) => xid,
         };
         let mut crtc = res.crtc(self, crtc_id)?;
@@ -304,17 +304,12 @@ impl XHandle {
     /// xhandle.set_rotation(dp_1, Rotation::Inverted)?;
     /// ```
     ///
-    pub fn set_rotation(
-        &mut self,
-        output_crtc: u64,
-        rotation: &Rotation,
-    ) -> Result<(), XrandrError> {
+    pub fn set_rotation(&mut self, crtc_id: u64, rotation: &Rotation) -> Result<(), XrandrError> {
         println!("Rotation Called");
-
         let res = ScreenResources::new(self)?;
-        let mut crtc = res.crtc(self, output_crtc)?;
-        (crtc.width, crtc.height) = crtc.rotated_size(*rotation);
+        let mut crtc = res.crtc(self, crtc_id)?;
         crtc.rotation = *rotation;
+        (crtc.width, crtc.height) = crtc.rotated_size(*rotation);
 
         self.apply_new_crtcs(&mut [crtc], &res)
     }

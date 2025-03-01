@@ -29,7 +29,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "deb",
+    "targets": "all",
     "shortDescription": "GUI for Xrandr built with Rust's Tauri and React.ts",
     "longDescription": "A GUI for those who use X11's display server. This application allows you to edit the location, rotation, ratio and rate of your monitors.",
     "icon": [

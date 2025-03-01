@@ -1,12 +1,8 @@
-pub mod property;
-
 use crate::screen_resources::ScreenResourcesHandle;
-use crate::{Crtc, Mode, ScreenResources, XHandle, XrandrError};
-use indexmap::IndexMap;
-use property::{Property, Value};
+use crate::{Crtc, ScreenResources, XHandle, XrandrError};
 use std::os::raw::c_int;
 use std::{ptr, slice};
-use x11::{xlib, xrandr};
+use x11::xrandr;
 
 use crate::XId;
 use crate::XTime;
@@ -16,7 +12,6 @@ use crate::CURRENT_TIME;
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Output {
     pub xid: XId,
-    pub properties: IndexMap<String, Property>,
     pub timestamp: XTime,
     pub is_primary: bool,
     pub crtc: Option<XId>,
@@ -64,13 +59,13 @@ impl Output {
     /// device model or colorspace.
     ///
     /// [edid-crate]: https://crates.io/crates/edid
-    #[must_use]
-    pub fn edid(&self) -> Option<Vec<u8>> {
-        self.properties.get("EDID").map(|prop| match &prop.value {
-            Value::Edid(edid) => edid.clone(),
-            _ => unreachable!("Property with name EDID should have type edid"),
-        })
-    }
+    // #[must_use]
+    // pub fn edid(&self) -> Option<Vec<u8>> {
+    //     self.properties.get("EDID").map(|prop| match &prop.value {
+    //         Value::Edid(edid) => edid.clone(),
+    //         _ => unreachable!("Property with name EDID should have type edid"),
+    //     })
+    // }
 
     pub(crate) fn from_xid(
         handle: &mut XHandle,
@@ -79,16 +74,7 @@ impl Output {
         res: &ScreenResources,
     ) -> Result<Self, XrandrError> {
         let output_info = OutputHandle::new(handle, xid)?;
-        let crtcs_vec = match crtcs_vec {
-            Some(crtcs) => crtcs.clone(),
-            None => {
-                let mut output: Vec<Crtc> = Vec::new();
-                if let Ok(crtc_found) = res.crtc(handle, xid) {
-                    output.push(crtc_found);
-                }
-                output
-            }
-        };
+
         let xrandr::XRROutputInfo {
             crtc,
             ncrtc,
@@ -125,24 +111,27 @@ impl Output {
             let crtcs = unsafe { slice::from_raw_parts(*crtcs, *ncrtc as usize) };
 
             let crtc_id = if *crtc == 0 { None } else { Some(*crtc) };
-
-            let curr_crtc = match crtc_id {
-                Some(crtc_id) => Some(
-                    crtcs_vec
-                        .iter()
-                        .find(|crtc| crtc.xid == crtc_id)
-                        .unwrap()
-                        .clone(),
-                ),
-                _ => None,
-            };
+            let curr_crtc: Option<Crtc>;
+            if let Some(crtcs_vec) = crtcs_vec {
+                curr_crtc = match crtc_id {
+                    Some(crtc_id) => Some(
+                        crtcs_vec
+                            .iter()
+                            .find(|crtc| crtc.xid == crtc_id)
+                            .unwrap()
+                            .clone(),
+                    ),
+                    _ => None,
+                };
+            } else {
+                curr_crtc = res.crtc(handle, xid).ok();
+            }
 
             let current_mode = curr_crtc
                 .and_then(|crtc_info| modes.iter().copied().find(|&m| m == crtc_info.mode));
 
             let result = Self {
                 xid,
-                properties: Default::default(),
                 timestamp: CURRENT_TIME,
                 is_primary,
                 crtc: crtc_id,
@@ -162,7 +151,6 @@ impl Output {
         } else {
             let result = Self {
                 xid,
-                properties: Default::default(),
                 timestamp: CURRENT_TIME,
                 is_primary: false,
                 crtc: Default::default(),
@@ -180,29 +168,6 @@ impl Output {
 
             Ok(result)
         }
-    }
-
-    fn get_props(
-        handle: &mut XHandle,
-        xid: xlib::XID,
-    ) -> Result<IndexMap<String, Property>, XrandrError> {
-        let mut props_len = 0;
-        let props_data =
-            unsafe { xrandr::XRRListOutputProperties(handle.sys.as_ptr(), xid, &mut props_len) };
-
-        let props_slice = unsafe { slice::from_raw_parts(props_data, props_len as usize) };
-
-        let props = props_slice
-            .iter()
-            .map(|prop_id| {
-                let prop = Property::get(handle, xid, *prop_id)?;
-                Ok((prop.name.clone(), prop))
-            })
-            .collect();
-
-        unsafe { xlib::XFree(props_data.cast()) };
-
-        props
     }
 
     pub(crate) unsafe fn from_list(

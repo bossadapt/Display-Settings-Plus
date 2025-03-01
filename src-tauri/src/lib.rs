@@ -216,29 +216,39 @@ async fn set_primary(xid: u64) -> Result<(), XrandrError> {
 }
 //ueses strings to parce because javascript round ,ciel and trunc make numbers like 1920.0 or 0.999999999999999999432 and im bored of it
 #[tauri::command]
-async fn set_position(output_crtc: u64, x: String, y: String) -> Result<(), XrandrError> {
-    //setting up vars
-    let mut xhandle = XHandle::open()?;
-    //shadow the dumb strings
-    let x: i32 = x.parse().unwrap();
-    let y: i32 = y.parse().unwrap();
-    //making the change
-    println!("position set x:{}, y:{}", x, y);
-    xhandle.set_position(output_crtc, x, y)?;
+async fn set_position(output_crtc: Option<u64>, x: String, y: String) -> Result<(), XrandrError> {
+    if let Some(crtc_id) = output_crtc {
+        //setting up vars
+        let mut xhandle = XHandle::open()?;
+        //shadow the dumb strings
+        let x: i32 = x.parse().unwrap();
+        let y: i32 = y.parse().unwrap();
+        //making the change
+        println!("position set x:{}, y:{}", x, y);
+
+        xhandle.set_position(crtc_id, x, y)?;
+    } else {
+        return Err(XrandrError::OutputDisabled("d".to_owned()));
+    }
+
     return Ok(());
 }
 #[tauri::command]
-async fn set_rotation(output_crtc: u64, rotation: Rotation) -> Result<(), XrandrError> {
+async fn set_rotation(output_crtc: Option<u64>, rotation: Rotation) -> Result<(), XrandrError> {
     //setting up vars
-    let mut xhandle = XHandle::open()?;
-    //making the change
-    xhandle.set_rotation(output_crtc, &rotation)?;
+    if let Some(crtc_id) = output_crtc {
+        let mut xhandle = XHandle::open()?;
+        xhandle.set_rotation(crtc_id, &rotation)?;
+    } else {
+        return Err(XrandrError::OutputDisabled("".to_owned()));
+    }
     return Ok(());
 }
 ///returns crtc after enabling monitor
 #[tauri::command]
 async fn set_enabled(xid: u64, enabled: bool) -> Result<u64, XrandrError> {
     //setting up vars
+    println!("enabled set as {} for {}", enabled, xid);
     let mut xhandle = XHandle::open()?;
     let res = ScreenResources::new(&mut xhandle)?;
     let focused_output = res.output(&mut xhandle, xid, None, &res)?;
@@ -253,16 +263,18 @@ async fn set_enabled(xid: u64, enabled: bool) -> Result<u64, XrandrError> {
 }
 #[tauri::command]
 async fn set_mode(
-    output_crtc: u64,
+    output_crtc: Option<u64>,
     mode_xid: u64,
     mode_height: u32,
     mode_width: u32,
 ) -> Result<(), XrandrError> {
-    //setting up vars
-    let mut xhandle = XHandle::open()?;
-    let res = ScreenResources::new(&mut xhandle)?;
-    //making the change
-    xhandle.set_mode(output_crtc, mode_xid, mode_height, mode_width, &res)?;
+    if let Some(crtc_id) = output_crtc {
+        let mut xhandle = XHandle::open()?;
+        let res = ScreenResources::new(&mut xhandle)?;
+        xhandle.set_mode(crtc_id, mode_xid, mode_height, mode_width, &res)?;
+    } else {
+        return Err(XrandrError::OutputDisabled("".to_owned()));
+    }
     return Ok(());
 }
 

@@ -203,6 +203,8 @@ impl Crtc {
         self.x = 0;
         self.y = 0;
         self.mode = 0;
+        self.height = 0;
+        self.width = 0;
         self.rotation = Rotation::Normal;
         self.outputs.clear();
     }
