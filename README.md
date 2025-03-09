@@ -8,7 +8,7 @@
 
 | Functionality | Display Settings Plus | Ubuntu Display Settings |
 |--------------|----------------------|-----------------------|
-| Undo | Modular | Whole |
+| Undo | Modular[Beta] | Whole |
 | Disable | :white_check_mark: | :white_check_mark: |
 | Screenshot | :white_check_mark: | :x: |
 | Position Panning | :white_check_mark: | :x: |
@@ -30,7 +30,7 @@
 
 | Functionality | Display Settings Plus | ARandR |
 |--------------|----------------------|--------|
-| Undo | Modular | :x: |
+| Undo | Modular[Beta] | :x: |
 | Disable | :white_check_mark: | :white_check_mark: |
 | Screenshot | :white_check_mark: | :x: |
 | Position Panning | :white_check_mark: | :x: |
