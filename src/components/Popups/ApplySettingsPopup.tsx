@@ -1,8 +1,8 @@
 import { MutableRefObject, useEffect, useRef, useState } from "react";
-import { FrontendMonitor, Rotation } from "../globalValues";
+import { FrontendMonitor, Rotation } from "../../globalValues";
 import { invoke } from "@tauri-apps/api/core";
 import "./ApplySettingsPopup.css"
-import { focusedSettingsFunctions } from "./LoadedScreen";
+import { focusedSettingsFunctions } from "../LoadedScreen";
 interface ApplySettingsPopupProps {
     initialMonitors: MutableRefObject<FrontendMonitor[]>;
     normalizePositionsRef: MutableRefObject<((customMonitors: FrontendMonitor[]) => FrontendMonitor[]) | null>;

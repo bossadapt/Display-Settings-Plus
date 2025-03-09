@@ -1,0 +1,67 @@
+.mass-apply-popup {
+    display: block;
+    position: fixed;
+    padding: 10px;
+    width: 300px;
+    left: 50%;
+    margin-left: -200px;
+    height: 145px;
+    top: 50%;
+    margin-top: -100px;
+    z-index: 20;
+  }
+
+  .mass-apply-popup:after {
+    position: fixed;
+    content: "";
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: -2;
+  }
+  
+  .mass-apply-popup:before {
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    border-style: double;
+    border-radius: 25px;
+    border-color: hotpink;
+    background-color: rgb(11, 11, 20);
+    z-index: -1;
+  }
+  .mass-apply-contents{
+    display: flex;
+    flex-direction: column;
+    height: 135px;
+  }
+  .mass-apply-header{
+    display: flex;
+    flex-direction: row;
+  }
+  .mass-apply-popup-title{
+    margin-left: auto;
+    margin-top: 5px;
+    font-size: 30px;
+  }
+  .mass-apply-text{
+    margin-bottom: auto;
+  }
+  .mass-apply-undo-button{
+    margin: auto;
+    width: 100%;
+    color: hotpink;
+    border-radius: 0px 0px 20px 20px;
+  }
+  .mass-apply-close-button{
+    margin: auto;
+    width: 10%;
+    color: red;
+    border-radius: 0px 20px 0px 0px;
+    margin-right: 0px;
+  }

@@ -2,7 +2,7 @@ import { Dispatch, MutableRefObject, SetStateAction, useState } from "react";
 import { FrontendMonitor, Preset } from "../globalValues";
 import { invoke } from "@tauri-apps/api/core";
 import "./Presets.css";
-import { SingleError } from "./SingleErrorPopUp";
+import { SingleError } from "./Popups/SingleErrorPopUp";
 interface PresetsProps {
     presets: Preset[];
     setPresets: Dispatch<SetStateAction<Preset[]>>;
