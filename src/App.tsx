@@ -33,9 +33,8 @@ function App() {
     didInit.current = true;
     init();
   }, []);
-  //TODO: click inside freehand will set focus monitor
-  //TODO: Clean UI
-  //TODO: Write Read Me
+
+  //TODO: Update read me
 
   async function init() {
     await refreshMonitors();

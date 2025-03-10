@@ -44,24 +44,21 @@
     display: flex;
     flex-direction: row;
   }
-  .mass-apply-popup-title{
-    margin-left: auto;
-    margin-top: 5px;
-    font-size: 30px;
-  }
   .mass-apply-text{
     margin-bottom: auto;
   }
   .mass-apply-undo-button{
     margin: auto;
     width: 100%;
+    height: 100%;
     color: hotpink;
     border-radius: 0px 0px 20px 20px;
   }
   .mass-apply-close-button{
     margin: auto;
-    width: 10%;
+    width: 100%;
+    height: 100%;
     color: red;
-    border-radius: 0px 20px 0px 0px;
+    border-radius: 20px 20px 0px 0px;
     margin-right: 0px;
   }

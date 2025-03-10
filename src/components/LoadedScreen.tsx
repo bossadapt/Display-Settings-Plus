@@ -1,4 +1,4 @@
-import { Dispatch, MutableRefObject, SetStateAction, useEffect, useRef, useState } from 'react';
+import { Dispatch, MutableRefObject, SetStateAction, useRef, useState } from 'react';
 import Select from 'react-select';
 import { customSelectTheme, FrontendMonitor, MiniMonitor, Preset, Rotation } from '../globalValues';
 import FreeHandPosition from './FreeHandPosition';

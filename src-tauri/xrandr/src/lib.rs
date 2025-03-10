@@ -281,14 +281,6 @@ impl XHandle {
         self.apply_new_crtcs(&mut [crtc], &res)
     }
 
-    ///Custom specific position setter
-    pub fn set_position(&mut self, output_crtc: u64, x: i32, y: i32) -> Result<(), XrandrError> {
-        let res = ScreenResources::new(self)?;
-        let mut crtc = res.crtc(self, output_crtc)?;
-        crtc.x = x;
-        crtc.y = y;
-        self.apply_new_crtcs(&mut [crtc], &res)
-    }
     /// Sets the position of a given output, relative to another
     ///
     /// # Arguments

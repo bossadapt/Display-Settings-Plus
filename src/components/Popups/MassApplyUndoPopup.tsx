@@ -57,18 +57,14 @@ export const MassApplyUndoPopup: React.FC<MassApplyProps> = ({
   return (
     <div className='mass-apply-popup' style={{ display: showPopUp ? 'block' : 'none' }}>
       <div className='mass-apply-contents'>
-        <div className='mass-apply-header'>
-          <h1 className='mass-apply-popup-title'>Undo Mass Apply</h1>
-          <button
-            className='mass-apply-close-button'
-            onClick={() => {
-              closeHandle();
-            }}
-          >
-            X
-          </button>
-        </div>
-
+        <button
+          className='mass-apply-close-button'
+          onClick={() => {
+            closeHandle();
+          }}
+        >
+          Keep Changes
+        </button>
         <hr />
         <button
           className='mass-apply-undo-button'
@@ -76,7 +72,7 @@ export const MassApplyUndoPopup: React.FC<MassApplyProps> = ({
             undoHandle();
           }}
         >
-          Undo
+          Undo Changes
         </button>
       </div>
     </div>

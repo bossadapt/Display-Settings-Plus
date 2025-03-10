@@ -214,23 +214,38 @@ async fn set_primary(xid: u64) -> Result<(), XrandrError> {
     xhandle.set_primary(xid);
     return Ok(());
 }
-//ueses strings to parce because javascript round ,ciel and trunc make numbers like 1920.0 or 0.999999999999999999432 and im bored of it
+//uses strings to parce because javascript round ,ciel and trunc make numbers like 1920.0 or 0.999999999999999999432 and im bored of it
+//Cannot realistically apply positions once at a time due to normalization pushing monitors to the left
+#[derive(Deserialize, Debug)]
+struct PositionProps {
+    output_crtc: Option<u64>,
+    x: String,
+    y: String,
+}
 #[tauri::command]
-async fn set_position(output_crtc: Option<u64>, x: String, y: String) -> Result<(), XrandrError> {
-    if let Some(crtc_id) = output_crtc {
-        //setting up vars
-        let mut xhandle = XHandle::open()?;
-        //shadow the dumb strings
-        let x: i32 = x.parse().unwrap();
-        let y: i32 = y.parse().unwrap();
-        //making the change
-        println!("position set x:{}, y:{}", x, y);
-
-        xhandle.set_position(crtc_id, x, y)?;
-    } else {
-        return Err(XrandrError::OutputDisabled("d".to_owned()));
+async fn set_positions(props: Vec<PositionProps>) -> Result<(), XrandrError> {
+    //sort props
+    let mut crtcs: Vec<Crtc> = Vec::new();
+    let mut xhandle: XHandle = XHandle::open()?;
+    let res = ScreenResources::new(&mut xhandle)?;
+    println!("{:?}", props);
+    for prop in props {
+        if let Some(crtc_id) = prop.output_crtc {
+            //setting up vars
+            //shadow the dumb strings
+            let x: i32 = prop.x.parse().unwrap();
+            let y: i32 = prop.y.parse().unwrap();
+            //making the change
+            println!("position set x:{}, y:{}", x, y);
+            let mut crtc = res.crtc(&mut xhandle, crtc_id)?;
+            crtc.x = x;
+            crtc.y = y;
+            crtcs.push(crtc);
+        } else {
+            println!("did not update cus no id");
+        }
     }
-
+    xhandle.apply_new_crtcs(&mut crtcs, &res)?;
     return Ok(());
 }
 #[tauri::command]
@@ -390,7 +405,7 @@ pub fn run() {
             get_monitors,
             set_primary,
             set_enabled,
-            set_position,
+            set_positions,
             set_rotation,
             set_mode,
             get_presets,

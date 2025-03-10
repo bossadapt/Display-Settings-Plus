@@ -8,7 +8,7 @@
 
 | Functionality | Display Settings Plus | Ubuntu Display Settings |
 |--------------|----------------------|-----------------------|
-| Undo | Modular[Beta] | Whole |
+| Undo | Modular & Whole | Whole |
 | Disable | :white_check_mark: | :white_check_mark: |
 | Screenshot | :white_check_mark: | :x: |
 | Position Panning | :white_check_mark: | :x: |
@@ -30,7 +30,7 @@
 
 | Functionality | Display Settings Plus | ARandR |
 |--------------|----------------------|--------|
-| Undo | Modular[Beta] | :x: |
+| Undo | Modular & Whole | :x: |
 | Disable | :white_check_mark: | :white_check_mark: |
 | Screenshot | :white_check_mark: | :x: |
 | Position Panning | :white_check_mark: | :x: |
@@ -49,4 +49,4 @@
 | Language | English | Multi |
 
 ## How Does It Work?
-A blog post explaining the details will be published soon.
+In short It balances the state in the frontend with 2 states custom(state of all customization user makes without applying) and initial(state of last applied/ pulled from system)
