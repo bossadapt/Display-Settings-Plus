@@ -10,6 +10,7 @@ import SimplePopUp from './Popups/SimplePopUp';
 import Presets from './Presets';
 import SingleErrorPopup, { SingleError } from './Popups/SingleErrorPopUp';
 import MassApplyUndoPopup from './Popups/MassApplyUndoPopup';
+import { cloneDeep } from 'lodash';
 interface LoadedProps {
   singleErrorProps: SingleError;
   monitorRefreshRef: MutableRefObject<Function>;
@@ -21,23 +22,11 @@ interface LoadedProps {
   outputNames: MutableRefObject<String[]>;
 }
 export interface focusedSettingsFunctions {
-  enable:
-    | ((
-        monitors: FrontendMonitor[],
-        focusedMonitorIdx: number,
-        enabled: boolean
-      ) => FrontendMonitor[])
-    | null;
-  position: ((monitors: FrontendMonitor[], focusedMonitorIdx: number) => FrontendMonitor[]) | null;
-  rotation: ((monitors: FrontendMonitor[], focusedMonitorIdx: number) => FrontendMonitor[]) | null;
-  mode: ((monitors: FrontendMonitor[], focusedMonitorIdx: number) => FrontendMonitor[]) | null;
-  setCrtc:
-    | ((
-        monitors: FrontendMonitor[],
-        focusedMonitorIdx: number,
-        newCrtc: number
-      ) => FrontendMonitor[])
-    | null;
+  enable: ((focusedMonitorIdx: number, enabled: boolean) => FrontendMonitor[]) | null;
+  position: ((focusedMonitorIdx: number) => FrontendMonitor[]) | null;
+  rotation: ((focusedMonitorIdx: number) => FrontendMonitor[]) | null;
+  mode: ((focusedMonitorIdx: number) => FrontendMonitor[]) | null;
+  setCrtc: ((focusedMonitorIdx: number, newCrtc: number) => FrontendMonitor[]) | null;
 }
 export const LoadedScreen: React.FC<LoadedProps> = ({
   singleErrorProps,
@@ -125,7 +114,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({
   }
 
   function resetAll() {
-    setCustMonitors([...initialMonitors.current]);
+    setCustMonitors(cloneDeep(initialMonitors.current));
     if (rerenderMonitorsContainerRef.current)
       rerenderMonitorsContainerRef.current(initialMonitors.current);
   }
@@ -151,14 +140,8 @@ export const LoadedScreen: React.FC<LoadedProps> = ({
   async function massApply() {
     setShowSimplePopUp(true);
     setSimplePopUpReason('Mass Applying');
-    console.log(
-      'mass applied called with cust,initial',
-      [...customMonitors],
-      [...initialMonitors.current]
-    );
     await applyPrimaryMonitor();
     let miniMonitors = monitors2MiniMonitors(customMonitors);
-
     //normalize all positions and pass
     await invoke<(number | undefined)[]>('quick_apply', {
       monitors: miniMonitors,
@@ -166,7 +149,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({
       .then(crtcs => {
         for (let i = 0; i < crtcs.length; i++) {
           if (crtcs[i]) {
-            resetFunctions.current.setCrtc!(customMonitors, i, crtcs[i]!);
+            resetFunctions.current.setCrtc!(i, crtcs[i]!);
           }
         }
         setShowMassUndoPopup(true);

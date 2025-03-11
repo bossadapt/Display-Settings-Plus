@@ -73,15 +73,10 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({
   }
   function updateGlobalPosition(monitorName: string, x: number, y: number) {
     //console.log('setting x:', x, 'y:', y);
-    console.log(
-      'prior updating positions:(cust,initial)',
-      customMonitorsRef,
-      initialMonitors.current
-    );
+
     customMonitorsRef.current = customMonitorsRef.current.map(curMon =>
       curMon.name === monitorName ? { ...curMon, y: Math.trunc(y), x: Math.trunc(x) } : curMon
     );
-    console.log('new cust monitors after updateglobal position', customMonitorsRef.current);
     setCustMonitors(customMonitorsRef.current);
   }
   async function rerenderMonitors(newMonitors: FrontendMonitor[]) {
@@ -91,8 +86,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({
       //deletion
       //app.current!.stage.children.forEach((child) => { child.children.forEach((child) => { child.destroy() }) });
       app.current!.stage.children = [];
-      console.log('cleared');
-      console.log(app.current!.stage.children);
       //rebuilding
       for (let i = 0; i < newMonitors.length; i++) {
         app.current!.stage.addChild(await createMonitorContainer(newMonitors[i]));
@@ -132,7 +125,6 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({
       monitorWidth = monitor.outputs[0].currentMode!.height / monitorScale;
       monitorHeight = monitor.outputs[0].currentMode!.width / monitorScale;
     }
-    console.log('Width:,', monitorWidth, 'Height:', monitorHeight);
 
     monitorGraphic.rect(0, 0, monitorWidth, monitorHeight);
     monitorGraphic.fillStyle = 'black';
@@ -335,6 +327,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({
     //handle rotation
     let monitorWidth = monitor.outputs[0].currentMode!.width;
     let monitorHeight = monitor.outputs[0].currentMode!.height;
+
     if (
       monitor.outputs[0].rotation === Rotation.Left ||
       monitor.outputs[0].rotation === Rotation.Right
@@ -345,9 +338,9 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({
     //handle redundant math
     let middleX = monitor.x + monitorWidth / 2;
     let middleY = monitor.y + monitorHeight / 2;
-    let right = monitor.x + monitor.widthPx;
+    let right = monitor.x + monitorWidth;
     let top = monitor.y;
-    let bottom = monitor.y + monitor.heightPx;
+    let bottom = monitor.y + monitorHeight;
     let left = monitor.x;
     return [
       { monitorName: monitor.name, x: left, y: top, pointRelative: PointRelative.TopLeft },
@@ -531,12 +524,12 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({
   }
   ///Used to make it so the farthest left monitor starts at zero x and and lowest monitor to start at zero(adjusting all other monitors accordingly)
   function normalizePositions(monitors: FrontendMonitor[]): FrontendMonitor[] {
-    console.log('called normalize monitors with ', monitors);
     //console.log("initial XX:", initialMonitors.current[focusedMonitorIdx].x, "| YY:", initialMonitors.current[focusedMonitorIdx].y);
+    let newMonitors = cloneDeep(monitors);
     let minOffsetY = Number.MAX_VALUE;
     let minOffsetX = Number.MAX_VALUE;
     //find the smallest offsets
-    monitors.forEach(mon => {
+    newMonitors.forEach(mon => {
       if (mon.outputs[0].enabled) {
         if (mon.x < minOffsetX) {
           minOffsetX = mon.x;
@@ -546,21 +539,35 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({
         }
       }
     });
-    if (minOffsetX == Number.MAX_VALUE) {
+
+    if (minOffsetX == Number.MAX_VALUE && minOffsetY == Number.MAX_VALUE) {
       //there are no monitors
+      console.log('no existing monitors?');
       return monitors;
     }
     //revert the offset to normalize
-    monitors.forEach(mon => {
-      if (mon.outputs[0].enabled) {
-        mon.x -= minOffsetX;
-        mon.y -= minOffsetY;
-      }
-    });
-    setCustMonitors(cloneDeep(monitors));
+    if (minOffsetX !== Number.MAX_VALUE) {
+      console.log('applying offset x:', minOffsetX);
+
+      newMonitors.forEach(mon => {
+        if (mon.outputs[0].enabled) {
+          mon.x -= minOffsetX;
+        }
+      });
+    }
+    if (minOffsetY !== Number.MAX_VALUE) {
+      console.log('applying offset x:', minOffsetY);
+      newMonitors.forEach(mon => {
+        if (mon.outputs[0].enabled) {
+          mon.y -= minOffsetY;
+        }
+      });
+    }
+    setCustMonitors(newMonitors);
+
     screenDragOffsetTotal.current.x = 0;
     screenDragOffsetTotal.current.y = 0;
-    return monitors;
+    return newMonitors;
   }
 
   useEffect(() => {

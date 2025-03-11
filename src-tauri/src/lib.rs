@@ -249,11 +249,27 @@ async fn set_positions(props: Vec<PositionProps>) -> Result<(), XrandrError> {
     return Ok(());
 }
 #[tauri::command]
-async fn set_rotation(output_crtc: Option<u64>, rotation: Rotation) -> Result<(), XrandrError> {
+async fn set_rotation(
+    output_crtc: Option<u64>,
+    rotation: Rotation,
+    new_width: u32,
+    new_height: u32,
+) -> Result<(), XrandrError> {
     //setting up vars
+    println!(
+        "Called Set Rotation with crtc id {:#?} and rotation {:#?}",
+        output_crtc, rotation
+    );
     if let Some(crtc_id) = output_crtc {
         let mut xhandle = XHandle::open()?;
-        xhandle.set_rotation(crtc_id, &rotation)?;
+        let res = ScreenResources::new(&mut xhandle)?;
+        let mut crtc = res.crtc(&mut xhandle, crtc_id)?;
+        crtc.rotation = rotation;
+        println!("old width:{},height:{}", crtc.width, crtc.height);
+        crtc.width = new_width;
+        crtc.height = new_height;
+        println!("new width:{},height:{}", crtc.width, crtc.height);
+        xhandle.apply_new_crtcs(&mut [crtc], &res)?;
     } else {
         return Err(XrandrError::OutputDisabled("".to_owned()));
     }

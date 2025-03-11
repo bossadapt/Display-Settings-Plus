@@ -8,7 +8,7 @@
 
 | Functionality | Display Settings Plus | Ubuntu Display Settings |
 |--------------|----------------------|-----------------------|
-| Undo | Modular & Whole | Whole |
+| Undo | Modular[Beta] & Whole | Whole |
 | Disable | :white_check_mark: | :white_check_mark: |
 | Screenshot | :white_check_mark: | :x: |
 | Position Panning | :white_check_mark: | :x: |
@@ -30,7 +30,7 @@
 
 | Functionality | Display Settings Plus | ARandR |
 |--------------|----------------------|--------|
-| Undo | Modular & Whole | :x: |
+| Undo | Modular[Beta] & Whole | :x: |
 | Disable | :white_check_mark: | :white_check_mark: |
 | Screenshot | :white_check_mark: | :x: |
 | Position Panning | :white_check_mark: | :x: |
@@ -50,3 +50,5 @@
 
 ## How Does It Work?
 In short It balances the state in the frontend with 2 states custom(state of all customization user makes without applying) and initial(state of last applied/ pulled from system)
+## Future Plans
+Possibly expanding usage to other display manager servers or more focused monitor settings.

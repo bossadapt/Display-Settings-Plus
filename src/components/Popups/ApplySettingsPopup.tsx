@@ -57,7 +57,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
   const [monitorStates, setMonitorStates] = useState<MonitorApplyState[]>(
     new Array(initialMonitors.current.length).fill({ ...defaultMonitorApplyState })
   );
-  const instancedMonitors = useRef<FrontendMonitor[]>([]);
+  const custMonitorsRef = useRef<FrontendMonitor[]>([]);
   const [undoButtonText, setUndoButtonText] = useState('...');
   const [nextButtonText, setNextButtonText] = useState('...');
   const [buttonsEnabled, setButtonsEnabled] = useState(false);
@@ -78,9 +78,9 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
       new Array(initialMonitors.current.length).fill({ ...defaultMonitorApplyState })
     );
 
-    instancedMonitors.current = [...customMonitors];
+    custMonitorsRef.current = [...customMonitors];
     monitorsBeingAppliedIndexs.sort(
-      (m1, m2) => instancedMonitors.current[m1].x - instancedMonitors.current[m2].x
+      (m1, m2) => custMonitorsRef.current[m1].x - custMonitorsRef.current[m2].x
     );
     setMonitorsBeingChangedState(monitorsBeingAppliedIndexs);
     setShowPopup(true);
@@ -96,7 +96,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
       //enable
       // console.log("enabled called on monitor#", i);
       // console.log([...instancedMonitors.current])
-      let enableAttempt = await applyEnable(monitorsBeingAppliedIndexs[i], instancedMonitors);
+      let enableAttempt = await applyEnable(monitorsBeingAppliedIndexs[i], custMonitorsRef);
       setMonitorStates(prevMon =>
         prevMon.map((mon, idx) =>
           idx === monitorsBeingAppliedIndexs[i] ? { ...mon, enabled: enableAttempt.state } : mon
@@ -111,7 +111,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
       }
       //disabled or had to force an undo change(happens due to state not wanting to change due to the values === the initial without a change)
       if (
-        !instancedMonitors.current[monitorsBeingAppliedIndexs[i]].outputs[0].enabled ||
+        !custMonitorsRef.current[monitorsBeingAppliedIndexs[i]].outputs[0].enabled ||
         enableAttempt.state !== AttemptState.Undone
       ) {
         // console.log("position called on monitor#", i);
@@ -126,7 +126,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
         );
         let positionAttempt = await applyPosition(
           monitorsBeingAppliedIndexs[i],
-          instancedMonitors,
+          custMonitorsRef,
           false
         );
         setMonitorStates(prevMon =>
@@ -155,7 +155,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
         );
         let rotationAttempt = await applyRotation(
           monitorsBeingAppliedIndexs[i],
-          instancedMonitors,
+          custMonitorsRef,
           false
         );
         setMonitorStates(prevMon =>
@@ -181,7 +181,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
             idx === monitorsBeingAppliedIndexs[i] ? { ...mon, mode: AttemptState.InProgress } : mon
           )
         );
-        let modeAttempt = await applyMode(monitorsBeingAppliedIndexs[i], instancedMonitors, false);
+        let modeAttempt = await applyMode(monitorsBeingAppliedIndexs[i], custMonitorsRef, false);
         setMonitorStates(prevMon =>
           prevMon.map((mon, idx) =>
             idx === monitorsBeingAppliedIndexs[i] ? { ...mon, mode: modeAttempt.state } : mon
@@ -233,34 +233,30 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
   }
   async function applyEnable(
     focusedMonitorIdx: number,
-    newMonitors: MutableRefObject<FrontendMonitor[]>
+    custMonitorsRef: MutableRefObject<FrontendMonitor[]>
   ): Promise<Attempt> {
-    let newMonitorEnabledSetting = newMonitors.current[focusedMonitorIdx].outputs[0].enabled;
+    let newMonitorEnabledSetting = custMonitorsRef.current[focusedMonitorIdx].outputs[0].enabled;
     let oldMonitorEnabledSetting = initialMonitors.current[focusedMonitorIdx].outputs[0].enabled;
     let output: Attempt = { state: AttemptState.Unchanged, reason: '' };
     console.log('apply enabled called on ', focusedMonitorIdx);
     if (newMonitorEnabledSetting !== oldMonitorEnabledSetting) {
       console.log('enable internal called');
       await invoke<number>('set_enabled', {
-        xid: newMonitors.current[focusedMonitorIdx].outputs[0].xid,
+        xid: custMonitorsRef.current[focusedMonitorIdx].outputs[0].xid,
         enabled: newMonitorEnabledSetting,
       })
         .then(async newCrtc => {
           if (await promptUserToUndo()) {
-            newMonitors.current = [
-              ...resetFunctions.current.enable!(
-                newMonitors.current,
-                focusedMonitorIdx,
-                oldMonitorEnabledSetting
-              ),
+            custMonitorsRef.current = [
+              ...resetFunctions.current.enable!(focusedMonitorIdx, oldMonitorEnabledSetting),
             ];
             await invoke('set_enabled', {
               xid: initialMonitors.current[focusedMonitorIdx].outputs[0].xid,
               enabled: oldMonitorEnabledSetting,
             }).then(async _newCrtc => {
-              await applyPosition(focusedMonitorIdx, newMonitors, true);
-              await applyRotation(focusedMonitorIdx, newMonitors, true);
-              await applyMode(focusedMonitorIdx, newMonitors, true);
+              await applyPosition(focusedMonitorIdx, custMonitorsRef, true);
+              await applyRotation(focusedMonitorIdx, custMonitorsRef, true);
+              await applyMode(focusedMonitorIdx, custMonitorsRef, true);
               output = { state: AttemptState.Undone, reason: '' };
             });
           } else {
@@ -280,8 +276,8 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
                         crtc.width = mode.width;
                         crtc.height = mode.height;
                         */
-              newMonitors.current = [
-                ...resetFunctions.current.setCrtc!(newMonitors.current, focusedMonitorIdx, newCrtc),
+              custMonitorsRef.current = [
+                ...resetFunctions.current.setCrtc!(focusedMonitorIdx, newCrtc),
               ];
               let prefMode =
                 initialMonitors.current[focusedMonitorIdx].outputs[0].preferredModes[0];
@@ -299,10 +295,9 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
     }
     return output;
   }
-
   async function applyRotation(
     focusedMonitorIdx: number,
-    newMonitors: MutableRefObject<FrontendMonitor[]>,
+    custMonitorsRef: MutableRefObject<FrontendMonitor[]>,
     forced: boolean
   ): Promise<Attempt> {
     let output: Attempt = { state: AttemptState.Unchanged, reason: '' };
@@ -310,30 +305,50 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
     if (
       forced ||
       !(
-        newMonitors.current[focusedMonitorIdx].outputs[0].rotation ==
+        custMonitorsRef.current[focusedMonitorIdx].outputs[0].rotation ==
         initialMonitors.current[focusedMonitorIdx].outputs[0].rotation
       )
     ) {
+      let newRotation = custMonitorsRef.current[focusedMonitorIdx].outputs[0].rotation;
+      let oldRotation = initialMonitors.current[focusedMonitorIdx].outputs[0].rotation;
+      let newWidth =
+        newRotation === Rotation.Left || newRotation === Rotation.Right
+          ? initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.height
+          : initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.width;
+      let newHeight =
+        newRotation === Rotation.Left || newRotation === Rotation.Right
+          ? initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.width
+          : initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.height;
+
       console.log('rotation internal called');
       await invoke('set_rotation', {
-        outputCrtc: newMonitors.current[focusedMonitorIdx].outputs[0].crtc,
-        rotation: newMonitors.current[focusedMonitorIdx].outputs[0].rotation,
+        outputCrtc: custMonitorsRef.current[focusedMonitorIdx].outputs[0].crtc,
+        rotation: newRotation,
+        newWidth,
+        newHeight,
       })
         .then(async () => {
           if (!forced && (await promptUserToUndo())) {
-            newMonitors.current = [
-              ...resetFunctions.current.rotation!(newMonitors.current, focusedMonitorIdx),
-            ];
-
+            custMonitorsRef.current = [...resetFunctions.current.rotation!(focusedMonitorIdx)];
+            newWidth =
+              oldRotation === Rotation.Left || oldRotation === Rotation.Right
+                ? initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.height
+                : initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.width;
+            newHeight =
+              oldRotation === Rotation.Left || oldRotation === Rotation.Right
+                ? initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.width
+                : initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode.height;
             await invoke('set_rotation', {
               outputCrtc: initialMonitors.current[focusedMonitorIdx].outputs[0].crtc,
-              rotation: initialMonitors.current[focusedMonitorIdx].outputs[0].rotation,
+              rotation: oldRotation,
+              newWidth,
+              newHeight,
             });
 
             output = { state: AttemptState.Undone, reason: '' };
           } else {
             initialMonitors.current[focusedMonitorIdx].outputs[0].rotation =
-              newMonitors.current[focusedMonitorIdx].outputs[0].rotation;
+              custMonitorsRef.current[focusedMonitorIdx].outputs[0].rotation;
             output = { state: AttemptState.Completed, reason: '' };
           }
         })
@@ -343,7 +358,6 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
     }
     return output;
   }
-  //TODO: make it sos that it uses the new backend
   function monitor2PositionProps(monitors: FrontendMonitor[]): PositionProps[] {
     console.log('entered 2positionprops :', monitors);
     if (normalizePositionsRef.current) {
@@ -357,7 +371,7 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
   }
   async function applyPosition(
     focusedMonitorIdx: number,
-    newMonitors: MutableRefObject<FrontendMonitor[]>,
+    custMonitorsRef: MutableRefObject<FrontendMonitor[]>,
     forced: boolean
   ): Promise<Attempt> {
     let output: Attempt = { state: AttemptState.Unchanged, reason: '' };
@@ -366,13 +380,15 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
     if (
       forced ||
       !(
-        newMonitors.current[focusedMonitorIdx].x === initialMonitors.current[focusedMonitorIdx].x &&
-        newMonitors.current[focusedMonitorIdx].y === initialMonitors.current[focusedMonitorIdx].y
+        custMonitorsRef.current[focusedMonitorIdx].x ===
+          initialMonitors.current[focusedMonitorIdx].x &&
+        custMonitorsRef.current[focusedMonitorIdx].y ===
+          initialMonitors.current[focusedMonitorIdx].y
       )
     ) {
       let newPropsList: PositionProps[] = monitor2PositionProps(
         initialMonitorsClone.map((mon, posIdx) =>
-          posIdx === focusedMonitorIdx ? newMonitors.current[focusedMonitorIdx] : mon
+          posIdx === focusedMonitorIdx ? custMonitorsRef.current[focusedMonitorIdx] : mon
         )
       );
       await invoke('set_positions', {
@@ -383,24 +399,28 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
             initialMonitorsClone = cloneDeep(initialMonitors.current);
             let oldPropsList: PositionProps[] = monitor2PositionProps(initialMonitorsClone);
             console.log('internals of redo func called');
-            newMonitors.current = [
-              ...resetFunctions.current.position!(newMonitors.current, focusedMonitorIdx),
-            ];
+            custMonitorsRef.current = [...resetFunctions.current.position!(focusedMonitorIdx)];
             console.log(
               'output:',
-              newMonitors.current[focusedMonitorIdx].outputs[0].crtc,
+              custMonitorsRef.current[focusedMonitorIdx].outputs[0].crtc,
               ',x:',
-              newMonitors.current[focusedMonitorIdx].x,
+              custMonitorsRef.current[focusedMonitorIdx].x,
               ',y:',
-              newMonitors.current[focusedMonitorIdx].y
+              custMonitorsRef.current[focusedMonitorIdx].y
             );
             await invoke('set_positions', {
               props: oldPropsList,
             });
             output = { state: AttemptState.Undone, reason: '' };
+            custMonitorsRef.current[focusedMonitorIdx].x =
+              initialMonitors.current[focusedMonitorIdx].x;
+            custMonitorsRef.current[focusedMonitorIdx].y =
+              initialMonitors.current[focusedMonitorIdx].y;
           } else {
-            initialMonitors.current[focusedMonitorIdx].x = newMonitors.current[focusedMonitorIdx].x;
-            initialMonitors.current[focusedMonitorIdx].y = newMonitors.current[focusedMonitorIdx].y;
+            initialMonitors.current[focusedMonitorIdx].x =
+              custMonitorsRef.current[focusedMonitorIdx].x;
+            initialMonitors.current[focusedMonitorIdx].y =
+              custMonitorsRef.current[focusedMonitorIdx].y;
             output = { state: AttemptState.Completed, reason: '' };
           }
         })
@@ -415,45 +435,56 @@ export const ApplySettingsPopup: React.FC<ApplySettingsPopupProps> = ({
       );
       console.log(
         'cust4 x:' +
-          newMonitors.current[focusedMonitorIdx].x +
+          custMonitorsRef.current[focusedMonitorIdx].x +
           ', cust y:' +
-          newMonitors.current[focusedMonitorIdx].y
+          custMonitorsRef.current[focusedMonitorIdx].y
       );
     }
     return output;
   }
   async function applyMode(
     focusedMonitorIdx: number,
-    newMonitors: MutableRefObject<FrontendMonitor[]>,
+    custMonitorsRef: MutableRefObject<FrontendMonitor[]>,
     forced: boolean
   ): Promise<Attempt> {
     let output: Attempt = { state: AttemptState.Unchanged, reason: '' };
     let oldMode = initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode!;
-    let newMode = newMonitors.current[focusedMonitorIdx].outputs[0].currentMode!;
+    let newMode = custMonitorsRef.current[focusedMonitorIdx].outputs[0].currentMode!;
+    let newRotation = custMonitorsRef.current[focusedMonitorIdx].outputs[0].rotation;
     console.log('apply mode called on ', focusedMonitorIdx);
     if (forced || newMode.xid !== oldMode.xid) {
       console.log('mode internal called');
       await invoke('set_mode', {
-        outputCrtc: newMonitors.current[focusedMonitorIdx].outputs[0].crtc,
+        outputCrtc: custMonitorsRef.current[focusedMonitorIdx].outputs[0].crtc,
         modeXid: newMode.xid,
-        modeHeight: newMode.height,
-        modeWidth: newMode.width,
+        modeHeight:
+          newRotation == Rotation.Left || newRotation == Rotation.Right
+            ? newMode.width
+            : newMode.height,
+        modeWidth:
+          newRotation == Rotation.Left || newRotation == Rotation.Right
+            ? newMode.height
+            : newMode.width,
       })
         .then(async () => {
           if (!forced && (await promptUserToUndo())) {
             await invoke('set_mode', {
-              outputCrtc: newMonitors.current[focusedMonitorIdx].outputs[0].crtc,
+              outputCrtc: custMonitorsRef.current[focusedMonitorIdx].outputs[0].crtc,
               modeXid: oldMode.xid,
-              modeHeight: oldMode.height,
-              modeWidth: oldMode.width,
+              modeHeight:
+                newRotation == Rotation.Left || newRotation == Rotation.Right
+                  ? oldMode.width
+                  : oldMode.height,
+              modeWidth:
+                newRotation == Rotation.Left || newRotation == Rotation.Right
+                  ? oldMode.height
+                  : oldMode.width,
             });
-            newMonitors.current = [
-              ...resetFunctions.current.mode!(newMonitors.current, focusedMonitorIdx),
-            ];
+            custMonitorsRef.current = [...resetFunctions.current.mode!(focusedMonitorIdx)];
             output = { state: AttemptState.Undone, reason: '' };
           } else {
             initialMonitors.current[focusedMonitorIdx].outputs[0].currentMode! =
-              newMonitors.current[focusedMonitorIdx].outputs[0].currentMode!;
+              custMonitorsRef.current[focusedMonitorIdx].outputs[0].currentMode!;
             output = { state: AttemptState.Completed, reason: '' };
           }
         })

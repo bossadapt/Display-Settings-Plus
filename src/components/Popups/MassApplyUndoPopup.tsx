@@ -35,6 +35,7 @@ export const MassApplyUndoPopup: React.FC<MassApplyProps> = ({
   }
   async function undoHandle() {
     setShowSimplePopup(true);
+    console.log(cloneDeep(initialMonitors.current));
     let miniMonitors = toMiniMonitors(initialMonitors.current);
     await invoke<(number | undefined)[]>('quick_apply', {
       monitors: miniMonitors,
@@ -42,7 +43,7 @@ export const MassApplyUndoPopup: React.FC<MassApplyProps> = ({
       .then(crtcs => {
         for (let i = 0; i < crtcs.length; i++) {
           if (crtcs[i]) {
-            resetFunctions.current.setCrtc!(initialMonitors.current, i, crtcs[i]!);
+            resetFunctions.current.setCrtc!(i, crtcs[i]!);
           }
         }
       })
