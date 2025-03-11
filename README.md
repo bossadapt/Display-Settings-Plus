@@ -1,8 +1,7 @@
 # Display Settings Plus
 
 **Display Settings Plus** is a GUI for [Xrandr](https://www.x.org/archive/X11R7.6/doc/man/man3/Xrandr.3.xhtml) that allows users to rotate, resize, position, and apply presets to their monitors. The changes are performed using a modified version of a [Rust Xrandr wrapper](https://github.com/dzfranklin/xrandr-rs), with abstraction provided by Tauri and React TypeScript.
-
-![Screenshot of the application](https://github.com/user-attachments/assets/7604f9c4-b55f-486b-8de5-e38ea5121338)
+![Screenshot of the application](https://github.com/user-attachments/assets/d68ccadd-d986-40d5-ae53-46058bd0c9a7)
 
 ## Display Settings Plus vs. Distro Display Settings
 
