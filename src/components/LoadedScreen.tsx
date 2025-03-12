@@ -210,24 +210,42 @@ export const LoadedScreen: React.FC<LoadedProps> = ({
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'row' }}>
-        <button className='majorButtons' onClick={resetAll}>
+        <button
+          className='majorButtons'
+          title='Revert all settings to last applied/synced settings'
+          onClick={resetAll}
+        >
           Reset
         </button>
         <button
           className='majorButtons'
+          title='Performs syscalls to get current settings and overwrites state of application'
           onClick={() => {
             monitorRefreshRef.current();
           }}
         >
           Resync
         </button>
-        <button className='majorButtons' style={{ marginLeft: 'auto' }} onClick={copyScript}>
+        <button
+          className='majorButtons'
+          style={{ marginLeft: 'auto' }}
+          title='Copy X11 Command to Clipboard'
+          onClick={copyScript}
+        >
           Clipboard
         </button>
-        <button className='majorButtons' onClick={massApply}>
+        <button
+          className='majorButtons'
+          title='Push all custom settings in a syscall to the system and update last applied'
+          onClick={massApply}
+        >
           Mass Apply
         </button>
-        <button className='majorButtons' onClick={applyAll}>
+        <button
+          className='majorButtons'
+          title='Pushes one setting at a time, More efficient for small changes, Slower for larger'
+          onClick={applyAll}
+        >
           Modular Apply
         </button>
       </div>
@@ -257,8 +275,12 @@ export const LoadedScreen: React.FC<LoadedProps> = ({
           options={monitorOptions}
           theme={customSelectTheme}
         ></Select>
-        <button onClick={resetPrimryMonitor}>Reset</button>
-        <button onClick={applyPrimaryMonitor}>Apply</button>
+        <button onClick={resetPrimryMonitor} title='Reset Primary Monitor to Last Applied'>
+          Reset
+        </button>
+        <button title='Apply Selected Primary Monitor' onClick={applyPrimaryMonitor}>
+          Apply
+        </button>
       </div>
       <hr style={{ marginTop: '5px' }} />
       <div style={{ display: 'flex', flexDirection: 'row', height: '54vh' }}>
@@ -291,6 +313,7 @@ export const LoadedScreen: React.FC<LoadedProps> = ({
           return (
             <button
               key={mon.name}
+              title='Change Focused Monitor in Settings Below'
               disabled={focusedMonitorIdx == idx}
               onClick={() => {
                 setFocusedMonitorIdx(idx);

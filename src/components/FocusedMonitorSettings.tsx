@@ -319,7 +319,11 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({
             <div className='toggle'></div>
           </label>
         </div>
-        <button className='resetButton' onClick={resetAllFocused}>
+        <button
+          className='resetButton'
+          title='Resets All of Current Focused Monitor Settings to Last Applied'
+          onClick={resetAllFocused}
+        >
           Reset<br></br>Monitor
         </button>
       </div>
@@ -352,6 +356,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({
         <button
           className='resetButton'
           disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled}
+          title='Reset Position to Last Applied'
           onClick={() => {
             resetPosition(focusedMonitorIdx);
           }}
@@ -381,6 +386,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({
         </div>
         <button
           className='resetButton'
+          title='Reset Rotation to Last Applied'
           disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled}
           onClick={() => {
             resetRotation(focusedMonitorIdx);
@@ -429,6 +435,7 @@ export const FocusedMonitorSettings: React.FC<FocusedMonitorSettingsProps> = ({
         </div>
         <button
           className='resetButton'
+          title='Reset Mode to Last Applied'
           disabled={!customMonitors[focusedMonitorIdx].outputs[0].enabled}
           onClick={() => {
             resetModePreset(focusedMonitorIdx);

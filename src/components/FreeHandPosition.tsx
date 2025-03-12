@@ -597,13 +597,22 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({
         }}
       ></canvas>
       <div className='right-freehand-container'>
-        <button className='freehand-function-buttons' onClick={resetMonitorsPositions}>
+        <button
+          className='freehand-function-buttons'
+          title='Resets Monitor Positions of Last Applied'
+          onClick={resetMonitorsPositions}
+        >
           Reset Monitor Positions
         </button>
-        <button className='freehand-function-buttons' onClick={resetCameraPosition}>
+        <button
+          title='Resets All Panning to the Start'
+          className='freehand-function-buttons'
+          onClick={resetCameraPosition}
+        >
           Reset Camera Position
         </button>
         <button
+          title='Makes Lowest x=0 and Lowest y=0 , Apply Diffrence to the Rest of the Monitors and Reset Camera Position'
           className='freehand-function-buttons'
           onClick={() => normalizePositions(customMonitorsRef.current)}
         >
@@ -611,6 +620,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({
         </button>
         <button
           className='freehand-function-buttons'
+          title='Toggles of Whether to Snap to the 8 Points of a Square'
           style={{ color: snapEnabled ? 'hotpink' : '#3B3B3B' }}
           onClick={toggleSnap}
         >
@@ -623,6 +633,7 @@ export const FreeHandPosition: React.FC<FreeHandPositionProps> = ({
             <input
               className='scale-input'
               type='number'
+              title='Scale Monitors Inside of the Canvas 1:x for Display Purposes Only'
               onChange={eve => {
                 let newMonitorScale = Number(eve.target.value);
                 if (newMonitorScale > 0) {
