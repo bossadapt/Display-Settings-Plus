@@ -40,7 +40,7 @@
 | Position Zooming | Manual Dynamic | 3 options (1:4, 8, 16) |
 | Position Gaps Between Monitors | :white_check_mark: | :white_check_mark: |
 | Position Snapping | 8-point snapping (corners and edge centers align) | Hugs border |
-| Monitor Mirroring (Overlapping) | All, Individual, or None | All or None |
+| Monitor Mirroring (Overlapping) | All, Individual, or None | All, Individual, or None |
 | Rotation | :white_check_mark: | :white_check_mark: |
 | Resolution | :white_check_mark: | :white_check_mark: |
 | Refresh Rate | :white_check_mark: | :x: |
