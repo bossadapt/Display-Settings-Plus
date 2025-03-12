@@ -5,7 +5,7 @@
 ## How to use
 1. Simply choose and download which bundle you favor from the latest release from the releases tab
 2. Install using your favorite package manager
-3. Thaaats it, Nearly all buttons have descriptions of thier effects on the application.
+3. Thaaats it, Nearly all buttons have descriptions of their effects on the application.
 
 ## Display Settings Plus vs. Distro Display Settings
 
@@ -52,6 +52,6 @@
 | Language | English | Multi |
 
 ## How Does It Work?
-In short It balances the state in the frontend with 2 states custom(state of all customization user makes without applying) and initial(state of last applied/ pulled from system)
+In short, It balances the state in the frontend with 2 states custom(state of all customization user makes without applying) and initial(state of last applied/ pulled from the system)
 ## Future Plans
 Possibly expanding usage to other display manager servers or more focused monitor settings.
