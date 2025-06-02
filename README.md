@@ -7,6 +7,7 @@
 2. Install using your favorite package manager
 3. Thaaats it, Nearly all buttons have descriptions of their effects on the application.
 
+However, if you need further explanations beyond the buttons' whispers, an explanation of every button is found on my [blog](https://bossadapt.org/blogs/posts/how-to-use-display-settings-plus/)
 ## Display Settings Plus vs. Distro Display Settings
 
 | Functionality | Display Settings Plus | Ubuntu Display Settings |
